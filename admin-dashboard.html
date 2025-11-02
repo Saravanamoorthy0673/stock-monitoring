@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Admin Dashboard - SmartTrack</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: #0b0c2a; /* Dark navy blue */
+      color: #fff;
+      min-height: 100vh;
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    /* Top header layout */
+    .header {
+      display: flex;
+      justify-content: space-between; /* left & right corners */
+      align-items: center;
+      margin-bottom: 30px;
+    }
+
+    /* Back button */
+    .back-btn {
+      font-size: 32px;
+      font-weight: 900; /* Boldness */
+      color: white;
+      text-decoration: none;
+      transition: 0.3s;
+    }
+
+    .back-btn:hover {
+      transform: scale(1.15);
+      color: #ddd;
+    }
+    
+    /* Enquiry button */
+    .enquiry-btn {
+      background: linear-gradient(45deg, #ff9472, #f2709c);
+      color: #001219;
+      font-weight: 600;
+      padding: 10px 20px;
+      border-radius: 8px;
+      text-decoration: none;
+      box-shadow: 0 0 8px #ff9472, 0 0 15px #f2709c;
+      transition: 0.3s;
+    }
+
+    .enquiry-btn:hover {
+      opacity: 0.9;
+      transform: scale(1.05);
+      box-shadow: 0 0 15px #ff9472, 0 0 25px #f2709c;
+    }
+
+    /* Dashboard title */
+    .dashboard-title {
+      font-size: 36px;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 40px;
+      color: #ffffff;
+    }
+
+    /* Dashboard button layout */
+    .dashboard-buttons {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 40px;
+    }
+
+    .btn {
+      background: linear-gradient(to bottom right, #f2709c, #ff9472);
+      border: none;
+      border-radius: 25px;
+      padding: 40px 20px;
+      color: #fff;
+      font-size: 24px;
+      font-weight: 600;
+      width: 220px;
+      height: 340px;
+      text-align: center;
+      cursor: pointer;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3);
+      transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+      line-height: 1.6;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .btn:hover {
+      transform: translateY(-10px);
+      background: linear-gradient(to bottom right, #ff9472, #f2709c);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+    }
+  </style>
+</head>
+<body>
+  
+  <!-- Top bar -->
+  <div class="header">
+     <a href="index.html" class="back-btn">⮜</a>
+     <a href="/admin-enquiry" class="enquiry-btn">✉ Enquiry</a>
+  </div>
+
+  <!-- Title in center -->
+  <h1 class="dashboard-title">Welcome to Admin Dashboard</h1>
+
+  <!-- Dashboard buttons -->
+  <div class="dashboard-buttons">
+    <!-- ✅ FIXED: Use proper routes -->
+    <button class="btn" onclick="location.href='/staff_credential'">📦<br>Staff<br>Credential</button>
+    <button class="btn" onclick="location.href='/admin-stockavai'">📦<br>Stock<br>Available</button>
+    <button class="btn" onclick="location.href='/admin-history'">📊<br>Stock<br>History</button>
+  </div>
+
+</body>
+</html>

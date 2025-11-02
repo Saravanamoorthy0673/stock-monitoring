@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Staff Dashboard - SmartTrack</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: #0b0c2a; /* Dark navy blue */
+      color: #fff;
+      min-height: 100vh;
+      padding: 40px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .header {
+      display: flex;
+      justify-content: flex-end;
+      font-size: 20px;
+      font-weight: 600;
+      color: #f0f0f0;
+      margin-bottom: 20px;
+    }
+
+    .dashboard-title {
+      font-size: 36px;
+      font-weight: 700;
+      text-align: center;
+      margin-bottom: 40px;
+      color: #ffffff;
+    }
+
+    .dashboard-buttons {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      gap: 40px;
+    }
+
+    .btn {
+      background: linear-gradient(to bottom right, #f2709c, #ff9472);
+      border: none;
+      border-radius: 25px;
+      padding: 40px 20px;
+      color: #fff;
+      font-size: 24px;
+      font-weight: 600;
+      width: 220px;
+      height: 340px;
+      text-align: center;
+      cursor: pointer;
+      box-shadow: 0 16px 40px rgba(0, 0, 0, 0.3);
+      transition: transform 0.3s ease, box-shadow 0.3s ease, background 0.3s ease;
+      line-height: 1.6;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+    }
+
+    .btn:hover {
+      transform: translateY(-10px);
+      background: linear-gradient(to bottom right, #ff9472, #f2709c);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+    }
+    .back-btn {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      font-size: 32px;
+      font-weight: 900; /* Boldness */
+      color: white;
+      text-decoration: none;
+      transition: 0.3s;
+    }
+
+    .back-btn:hover {
+      transform: scale(1.15);
+      color:white;
+    }
+  </style>
+</head>
+<body>
+  <a href="index.html" class="back-btn">⮜</a>
+  <div class="header">Staff Dashboard</div>
+
+  <h1 class="dashboard-title">Welcome!</h1>
+
+  <div class="dashboard-buttons">
+    <div class="card">
+      <!-- ✅ FIXED: Use GET request instead of POST -->
+      <button class="btn" onclick="location.href='/staff-stockavai'">📦<br>Stock<br>Available</button>
+    </div> 
+    <button class="btn" onclick="location.href='/staff-enquiry'">📍<br>Enquiry<br></button>
+  </div>
+</body>
+</html>

@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>📊 Stock History - SmartTrack</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #f4f6f9;
+      color: #333;
+      margin: 0;
+      padding: 40px;
+    }
+    .header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    .back-btn {
+      background: #007bff;
+      color: #fff;
+      font-weight: 500;
+      padding: 8px 16px;
+      border-radius: 5px;
+      text-decoration: none;
+      transition: 0.3s;
+    }
+    .back-btn:hover { background: #0056b3; }
+    .title {
+      font-size: 28px;
+      font-weight: 700;
+      text-align: center;
+      color: #222;
+      flex: 1;
+    }
+    .search-container {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    .search-container input {
+      padding: 10px 14px;
+      border-radius: 6px;
+      border: 1px solid #ccc;
+      width: 250px;
+      font-size: 15px;
+      margin-right: 10px;
+    }
+    .search-container button {
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      background: #28a745;
+      color: white;
+      font-weight: 600;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    .search-container button:hover {
+      background: #218838;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      border-radius: 6px;
+      overflow: hidden;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+    th, td {
+      padding: 12px 16px;
+      text-align: center;
+      border-bottom: 1px solid #ddd;
+    }
+    th {
+      background: #230a45;
+      color: #fff;
+      font-size: 16px;
+    }
+    tr:nth-child(even) { background-color: #f9f9f9; }
+    tr:hover { background-color: #f1f1f1; }
+  </style>
+</head>
+<body>
+
+  <div class="header">
+    <a href="admin-dashboard.html" class="back-btn">← Back</a>
+    <h1 class="title">📊 Stock History</h1>
+  </div>
+
+  <!-- Search -->
+  <div class="search-container">
+    <input type="text" id="searchInput" placeholder="Search by Staff Name">
+    <button onclick="searchHistory()">Search</button>
+    <button onclick="resetHistory()" style="background:#6c757d;margin-left:5px;">Reset</button>
+  </div>
+
+  <!-- Table -->
+  <table>
+    <thead>
+      <tr>
+        <th>Staff Name</th>
+        <th>Product</th>
+        <th>Action</th>
+        <th>Quantity</th>
+        <th>Date & Time</th>
+      </tr>
+    </thead>
+    <tbody id="historyBody">
+      <!-- Data added dynamically -->
+    </tbody>
+  </table>
+
+  <script>
+    async function loadHistory(query = "") {
+      try {
+        const response = await fetch(`http://localhost:5000/api/history${query ? `?staff=${encodeURIComponent(query)}` : ""}`);
+        const data = await response.json();
+
+        const tbody = document.getElementById("historyBody");
+        tbody.innerHTML = "";
+
+        if (data.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="5">No records found</td></tr>`;
+          return;
+        }
+
+        data.forEach((log) => {
+          const row = `
+            <tr>
+              <td>${log.staffName}</td>
+              <td>${log.productName}</td>
+              <td>${log.operation}</td>
+              <td>${log.amount}</td>
+              <td>${new Date(log.timestamp).toLocaleString()}</td>
+            </tr>`;
+          tbody.innerHTML += row;
+        });
+      } catch (err) {
+        console.error("Error loading history:", err);
+      }
+    }
+
+    function searchHistory() {
+      const query = document.getElementById("searchInput").value.trim();
+      loadHistory(query);
+    }
+
+    function resetHistory() {
+      document.getElementById("searchInput").value = "";
+      loadHistory();
+    }
+
+    window.onload = loadHistory;
+  </script>
+
+</body>
+</html>

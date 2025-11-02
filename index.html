@@ -1,0 +1,95 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>SmartTrack Login Portal</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    body {
+      background: linear-gradient(120deg, #0f2027, #203a43, #2c5364);
+      background-size: 400% 400%;
+      animation: gradientShift 12s ease infinite;
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    @keyframes gradientShift {
+      0% { background-position: 0% 50%; }
+      50% { background-position: 100% 50%; }
+      100% { background-position: 0% 50%; }
+    }
+
+    .container {
+      text-align: center;
+      padding: 40px;
+      color: #fff;
+    }
+
+    .title {
+      font-size: 40px;
+      margin-bottom: 40px;
+      color: #00e3aa;
+      text-shadow: 2px 2px 8px rgba(0,0,0,0.6);
+    }
+
+    .card-container {
+      display: flex;
+      gap: 30px;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+      width: 180px;
+      height: 120px;
+      padding: 20px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 4px 20px rgba(0, 255, 200, 0.1);
+      border: 1px solid rgba(0, 255, 200, 0.2);
+      transition: transform 0.3s, box-shadow 0.3s;
+      cursor: pointer;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .card:hover {
+      transform: translateY(-12px);
+      box-shadow: 0 8px 30px rgba(0, 255, 200, 0.4);
+      background-color: rgba(255, 255, 255, 0.15);
+    }
+
+    .label {
+      font-size: 22px;
+      font-weight: 600;
+      color: #ffffff;
+      text-shadow: 1px 1px 4px rgba(0, 255, 200, 0.3);
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1 class="title">SmartTrack Login Portal</h1>
+    <div class="card-container">
+      <div class="card" onclick="location.href='/admin-login'">
+        <div class="label">Admin</div>
+      </div>
+      <div class="card" onclick="location.href='/staff-login'">
+        <div class="label">Staff</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

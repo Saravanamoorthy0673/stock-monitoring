@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>📦 Stock Availability - SmartTrack</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: #0b0c2a;
+      color: #fff;
+      padding: 30px;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    h1 {
+      text-align: center;
+      font-size: 32px;
+      margin-bottom: 20px;
+    }
+    .search-bar {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    input[type="text"] {
+      padding: 10px;
+      width: 300px;
+      border-radius: 8px;
+      border: none;
+      font-size: 16px;
+      text-align: center;
+    }
+    button.search-btn {
+      padding: 10px 20px;
+      border: none;
+      border-radius: 8px;
+      margin-left: 10px;
+      cursor: pointer;
+      font-weight: 600;
+      background: linear-gradient(45deg, #ff9472, #f2709c);
+      color: white;
+    }
+    button.search-btn:hover { opacity: 0.9; }
+    .table-container {
+      flex: 1;
+      overflow-y: auto;
+      border-radius: 10px;
+      background-color: #1c1d3a;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    th, td {
+      padding: 15px;
+      text-align: center;
+      border-bottom: 1px solid #444;
+    }
+    th {
+      background-color: #292b4d;
+      color: #ffb366;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    td { color: #e0e0e0; }
+    tr:hover { background-color: #2e2f50; }
+    .back-btn {
+      background: linear-gradient(45deg,#ff9472,#f2709c);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      align-self: center;
+      margin-top: 15px;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>📦 Stock Availability</h1>
+
+  <!-- 🔍 Search bar -->
+  <div class="search-bar">
+    <input type="text" id="searchInput" placeholder="Search product by name...">
+    <button class="search-btn" onclick="searchStock()">Search</button>
+  </div>
+
+  <!-- 📋 Table -->
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Product</th>
+          <th>Available Qty (Kg)</th>
+        </tr>
+      </thead>
+      <tbody id="stockTableBody">
+        <!-- Rows will be loaded dynamically -->
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 🔙 Back -->
+  <a class="back-btn" href="admin-dashboard.html">← Back to Dashboard</a>
+
+  <script>
+    const API_BASE = "http://localhost:5000/api/stock";
+    const tbody = document.getElementById("stockTableBody");
+    const searchInput = document.getElementById("searchInput");
+    let stockData = [];
+
+    async function loadStock() {
+      try {
+        const response = await fetch(API_BASE);
+        stockData = await response.json();
+        renderTable(stockData);
+      } catch (err) {
+        console.error("Error loading stock:", err);
+      }
+    }
+
+    function renderTable(data) {
+      tbody.innerHTML = "";
+      if (data.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="2">No stock found</td></tr>`;
+        return;
+      }
+      data.forEach((item) => {
+        const row = `
+          <tr>
+            <td>${item.name}</td>
+            <td>${item.qty}</td>
+          </tr>`;
+        tbody.innerHTML += row;
+      });
+    }
+
+    function searchStock() {
+      const keyword = searchInput.value.trim().toLowerCase();
+      const filtered = stockData.filter(item =>
+        item.name.toLowerCase().includes(keyword)
+      );
+      renderTable(filtered);
+    }
+
+    window.onload = loadStock;
+  </script>
+
+</body>
+</html>

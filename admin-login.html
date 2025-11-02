@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Admin Login - SmartTrack</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(to right, #0f2027, #203a43, #2c5364);
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #fff;
+    }
+
+    /* 🔙 Bold Back Button */
+    .back-btn {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      font-size: 32px;
+      font-weight: 900; /* Boldness */
+      color: white;
+      text-decoration: none;
+      transition: 0.3s;
+    }
+
+    .back-btn:hover {
+      transform: scale(1.15);
+      color: #ddd;
+    }
+
+    .login-box {
+      background: rgba(255, 255, 255, 0.05);
+      padding: 40px;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 380px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .login-box h2 {
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 28px;
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    .login-box input {
+      width: 100%;
+      padding: 14px;
+      margin-bottom: 10px;
+      background-color: rgba(255, 255, 255, 0.1);
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      font-size: 15px;
+      outline: none;
+    }
+
+    .login-box input::placeholder {
+      color: #ccc;
+    }
+
+    .login-box button {
+      width: 100%;
+      padding: 14px;
+      background: linear-gradient(to right, #1e3c72, #2a5298);
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.3s ease;
+      margin-top: 10px;
+    }
+
+    .login-box button:hover {
+      background: linear-gradient(to right, #2a5298, #1e3c72);
+    }
+
+    .error-message {
+      color: #ff4d4d;
+      font-size: 14px;
+      margin-bottom: 10px;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- 🔙 Bold Back Button -->
+  <a href="#" class="back-btn" onclick="goBack()">⮜</a>
+
+  <div class="login-box">
+    <h2>Admin Login</h2>
+    <form id="adminForm">
+      <input type="email" id="email" placeholder="Email ID" required />
+      <div class="error-message" id="emailError">❌ Invalid email format</div>
+
+      <input type="password" id="password" placeholder="Password" required />
+      <div class="error-message" id="passError">❌ Password must be at least 6 characters and include 1 special character</div>
+
+      <button type="submit">Login</button>
+    </form>
+  </div>
+
+  <script>
+    const form = document.getElementById("adminForm");
+    const email = document.getElementById("email");
+    const password = document.getElementById("password");
+    const emailError = document.getElementById("emailError");
+    const passError = document.getElementById("passError");
+
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      emailError.style.display = "none";
+      passError.style.display = "none";
+
+      let isValid = true;
+
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      if (!emailRegex.test(email.value.trim())) {
+        emailError.style.display = "block";
+        isValid = false;
+      }
+
+      const pwd = password.value.trim();
+      const passwordRegex = /^(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{6,}$/;
+      if (!passwordRegex.test(pwd)) {
+        passError.style.display = "block";
+        isValid = false;
+      }
+
+      if (isValid) {
+        fetch("/admin-login", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            email: email.value.trim(),
+            password: pwd
+          })
+        })
+        .then(response => response.json())
+        .then(data => {
+          if (data.success) {
+            // ✅ Simple redirect to dashboard
+            window.location.href = "/admin-dashboard";
+          } else {
+            alert(data.message);
+          }
+        })
+        .catch(error => {
+          console.error("Error:", error);
+          alert("Server error occurred.");
+        });
+      }
+    });
+
+    // ✅ Always go to index.html (not browser history)
+    function goBack() {
+      window.location.href = "index.html";
+    }
+</script>
+</body>
+</html>

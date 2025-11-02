@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Staff Queries - Admin View</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #f4f6f9;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 {
+      text-align: center;
+      font-size: 28px;
+      font-weight: 700;
+      margin-bottom: 20px;
+      color: #222;
+    }
+
+    .query-card {
+      background: #fff;
+      padding: 20px;
+      margin-bottom: 20px;
+      border-radius: 10px;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+      border-left: 5px solid #007bff;
+    }
+
+    .low-stock-card {
+      border-left-color: #e74c3c;
+      background: #fff5f5;
+    }
+
+    .staff-enquiry-card {
+      border-left-color: #28a745;
+      background: #f8fff8;
+    }
+
+    .query-header {
+      font-weight: 600;
+      margin-bottom: 10px;
+      color: #007bff;
+      font-size: 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .low-stock-header {
+      color: #e74c3c;
+    }
+
+    .staff-enquiry-header {
+      color: #28a745;
+    }
+
+    .query-type {
+      background: #007bff;
+      color: white;
+      padding: 4px 8px;
+      border-radius: 4px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .low-stock-type {
+      background: #e74c3c;
+    }
+
+    .staff-enquiry-type {
+      background: #28a745;
+    }
+
+    .query-info {
+      margin: 8px 0;
+      font-size: 14px;
+      color: #333;
+      display: flex;
+      align-items: center;
+    }
+
+    .query-info strong {
+      min-width: 120px;
+      color: #555;
+    }
+
+    .message {
+      margin-top: 15px;
+      padding: 12px;
+      background: #f8f9fa;
+      border-radius: 6px;
+      border-left: 4px solid #6c757d;
+      font-style: italic;
+      color: #555;
+    }
+
+    .timestamp {
+      text-align: right;
+      font-size: 12px;
+      color: #888;
+      margin-top: 10px;
+    }
+
+    .back-btn {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      font-size: 32px;
+      font-weight: 900;
+      color: black;
+      text-decoration: none;
+      transition: 0.3s;
+    }
+
+    .back-btn:hover {
+      transform: scale(1.15);
+      color: black;
+    }
+
+    .no-queries {
+      text-align: center;
+      color: #666;
+      font-style: italic;
+      margin-top: 50px;
+    }
+  </style>
+</head>
+<body>
+   <a href="/admin-dashboard" class="back-btn">⮜</a>
+  <h1>📩 All Enquiries & Alerts</h1>
+
+  <div id="queriesContainer">
+    <!-- Queries will be dynamically inserted here -->
+  </div>
+
+  <script>
+    async function fetchQueries() {
+      try {
+        const response = await fetch('/api/enquiries');
+        const queries = await response.json();
+
+        const container = document.getElementById('queriesContainer');
+        container.innerHTML = "";
+
+        if (queries.length === 0) {
+          container.innerHTML = '<div class="no-queries">No enquiries or alerts yet.</div>';
+          return;
+        }
+
+        queries.forEach(q => {
+          const isLowStock = q.type === 'low_stock';
+          const isStaffEnquiry = q.type === 'staff_enquiry';
+          
+          const card = document.createElement('div');
+          card.className = `query-card ${isLowStock ? 'low-stock-card' : ''} ${isStaffEnquiry ? 'staff-enquiry-card' : ''}`;
+
+          const typeText = isLowStock ? '🚨 LOW STOCK ALERT' : '📧 STAFF ENQUIRY';
+          const typeClass = isLowStock ? 'low-stock-type' : 'staff-enquiry-type';
+          const headerClass = isLowStock ? 'low-stock-header' : 'staff-enquiry-header';
+
+          card.innerHTML = `
+            <div class="query-header ${headerClass}">
+              <span>${typeText}</span>
+              <span class="query-type ${typeClass}">${q.type.toUpperCase().replace('_', ' ')}</span>
+            </div>
+            
+            <div class="query-info">
+              <strong>👤 Staff:</strong> ${q.staffName}
+            </div>
+            <div class="query-info">
+              <strong>📧 Email:</strong> ${q.staffEmail}
+            </div>
+            <div class="query-info">
+              <strong>👨‍💼 Username:</strong> ${q.staffUsername}
+            </div>
+            
+            ${q.productName ? `
+            <div class="query-info">
+              <strong>📦 Product:</strong> ${q.productName}
+            </div>
+            ` : ''}
+            
+            ${q.quantity ? `
+            <div class="query-info">
+              <strong>${isLowStock ? '📉 Reduced By:' : '📦 Quantity Needed:'}</strong> ${q.quantity} kg
+            </div>
+            ` : ''}
+            
+            ${q.currentStock ? `
+            <div class="query-info">
+              <strong>📊 Current Stock:</strong> <span style="color: #e74c3c; font-weight: bold;">${q.currentStock} kg</span>
+            </div>
+            ` : ''}
+            
+            ${q.message ? `
+            <div class="message">
+              <strong>💬 Message:</strong><br>
+              ${q.message}
+            </div>
+            ` : ''}
+            
+            <div class="timestamp">
+              🕐 ${new Date(q.timestamp).toLocaleString()}
+            </div>
+          `;
+
+          container.appendChild(card);
+        });
+
+      } catch (err) {
+        console.error("Error fetching queries:", err);
+        document.getElementById('queriesContainer').innerHTML = 
+          '<div class="no-queries">Error loading enquiries. Please try again.</div>';
+      }
+    }
+
+    // fetch queries on page load
+    window.onload = fetchQueries;
+  </script>
+
+</body>
+</html>

@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>📦 Stock Monitoring - SmartTrack</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;700&display=swap" rel="stylesheet" />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      font-family: 'Poppins', sans-serif;
+      background-color: #0b0c2a;
+      color: #fff;
+      padding: 30px;
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+    }
+    h1 {
+      text-align: center;
+      font-size: 32px;
+      margin-bottom: 20px;
+    }
+    .add-form {
+      text-align: center;
+      margin-bottom: 15px;
+    }
+    input[type="text"], input[type="number"] {
+      padding: 10px;
+      margin: 5px;
+      border-radius: 8px;
+      border: none;
+      font-size: 15px;
+      width: 180px;
+    }
+    button {
+      padding: 8px 15px;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+    button.add-btn {
+      background: linear-gradient(45deg,#ff9472,#f2709c);
+      color: white;
+    }
+    button.add-btn:hover { opacity: 0.9; }
+    .table-container {
+      flex: 1;
+      overflow-y: auto;
+      border-radius: 10px;
+      background-color: #1c1d3a;
+    }
+    table { width: 100%; border-collapse: collapse; }
+    th, td {
+      padding: 15px;
+      text-align: center;
+      border-bottom: 1px solid #444;
+    }
+    th {
+      background-color: #292b4d;
+      color: #ffb366;
+      position: sticky;
+      top: 0;
+      z-index: 10;
+    }
+    td { color: #e0e0e0; }
+    .low-stock {
+      color: #ff6b6b;
+      font-weight: bold;
+      animation: blink 2s infinite;
+    }
+    .critical-stock {
+      color: #ff0000;
+      font-weight: bold;
+      animation: blink 1s infinite;
+    }
+    @keyframes blink {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0.7; }
+    }
+    tr:hover { background-color: #2e2f50; }
+    .action-btn {
+      margin: 0 5px;
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 14px;
+    }
+    .plus { background-color: #4caf50; color: white; }
+    .minus { background-color: #e74c3c; color: white; }
+    .back-btn {
+      background: linear-gradient(45deg,#ff9472,#f2709c);
+      color: white;
+      padding: 10px 20px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      align-self: center;
+      margin-top: 15px;
+      display: inline-block;
+      text-align: center;
+    }
+    .alert-banner {
+      background: linear-gradient(45deg, #e74c3c, #c0392b);
+      color: white;
+      padding: 10px;
+      text-align: center;
+      border-radius: 8px;
+      margin-bottom: 15px;
+      font-weight: 600;
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>📦 Stock Monitoring</h1>
+
+  <!-- Low Stock Alert Banner -->
+  <div class="alert-banner" id="lowStockAlert">
+    ⚠️ Low Stock Alert! Email has been sent to admin.
+  </div>
+
+  <div class="add-form">
+    <!-- Search bar -->
+    <input type="text" id="searchItem" placeholder="🔍 Search Product" onkeyup="filterTable()">
+    <br><br>
+    <input type="text" id="newItem" placeholder="Product Name">
+    <input type="number" id="newQty" placeholder="Initial Quantity (Kg)">
+    <br>
+    <button class="add-btn" onclick="addNewItem()">+ Add Product</button>
+  </div>
+
+  <div class="table-container">
+    <table>
+      <thead>
+        <tr>
+          <th>Product</th>
+          <th>Available Qty (Kg)</th>
+          <th>Status</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody id="stockTableBody">
+        <!-- Rows populated from backend -->
+      </tbody>
+    </table>
+  </div>
+
+  <!-- ✅ FIXED: Use proper route -->
+  <a class="back-btn" href="/staff-dashboard">← Back to Dashboard</a>
+
+  <script>
+    const API_BASE = "/api/stock";
+    const tbody = document.getElementById("stockTableBody");
+    const lowStockAlert = document.getElementById("lowStockAlert");
+
+    // Fetch stock data from backend
+    async function loadStock() {
+      try {
+        const response = await fetch(API_BASE);
+        const data = await response.json();
+        renderTable(data);
+      } catch (error) {
+        console.error("Error loading stock:", error);
+      }
+    }
+
+    function renderTable(stockData) {
+      tbody.innerHTML = '';
+      stockData.forEach((item) => {
+        const row = document.createElement("tr");
+        
+        // Determine stock status
+        let statusClass = '';
+        let statusText = '';
+        if (item.qty < 100) {
+          statusClass = 'critical-stock';
+          statusText = 'CRITICAL';
+        } else if (item.qty < 200) {
+          statusClass = 'low-stock';
+          statusText = 'LOW';
+        } else {
+          statusText = 'NORMAL';
+        }
+
+        row.innerHTML = `
+          <td>${item.name}</td>
+          <td class="${statusClass}">${item.qty}</td>
+          <td class="${statusClass}">${statusText}</td>
+          <td>
+            <button class="action-btn plus" onclick="increaseQty('${item.name}')">+</button>
+            <button class="action-btn minus" onclick="decreaseQty('${item.name}')">-</button>
+          </td>`;
+        tbody.appendChild(row);
+      });
+    }
+
+    async function addNewItem() {
+      const name = document.getElementById("newItem").value.trim();
+      const qty = parseInt(document.getElementById("newQty").value.trim());
+
+      if (!name || isNaN(qty) || qty < 0) {
+        alert("Enter valid product name and quantity.");
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/add`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, qty })
+        });
+        const result = await response.json();
+        if (response.ok) {
+          loadStock();
+          document.getElementById("newItem").value = "";
+          document.getElementById("newQty").value = "";
+        } else {
+          alert(result.error || "Error adding product.");
+        }
+      } catch (error) {
+        console.error("Error adding product:", error);
+      }
+    }
+
+    async function increaseQty(name) {
+      let amount = prompt("Enter quantity to add:");
+      amount = parseInt(amount);
+      if (isNaN(amount) || amount <= 0) {
+        alert("Enter a valid amount.");
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/increase`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, amount })
+        });
+        const result = await response.json();
+        if (response.ok) loadStock();
+        else alert(result.error || "Error increasing quantity.");
+      } catch (error) {
+        console.error("Error increasing quantity:", error);
+      }
+    }
+
+    async function decreaseQty(name) {
+      let amount = prompt("Enter quantity to reduce:");
+      amount = parseInt(amount);
+      if (isNaN(amount) || amount <= 0) {
+        alert("Enter a valid amount.");
+        return;
+      }
+
+      try {
+        const response = await fetch(`${API_BASE}/decrease`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, amount })
+        });
+        const result = await response.json();
+        if (response.ok) {
+          loadStock();
+          
+          // Show alert banner if stock went below 200kg
+          const currentStock = result.stock?.qty;
+          if (currentStock < 200) {
+            showLowStockAlert();
+          }
+        } else {
+          alert(result.error || "Error reducing quantity.");
+        }
+      } catch (error) {
+        console.error("Error reducing quantity:", error);
+      }
+    }
+
+    function showLowStockAlert() {
+      lowStockAlert.style.display = 'block';
+      setTimeout(() => {
+        lowStockAlert.style.display = 'none';
+      }, 5000); // Hide after 5 seconds
+    }
+
+    function filterTable() {
+      const filter = document.getElementById("searchItem").value.toLowerCase();
+      const rows = tbody.getElementsByTagName("tr");
+      let found = false;
+
+      for (let i = 0; i < rows.length; i++) {
+        const productCell = rows[i].getElementsByTagName("td")[0];
+        if (productCell) {
+          const txtValue = productCell.textContent || productCell.innerText;
+          if (txtValue.toLowerCase().includes(filter)) {
+            rows[i].style.display = "";
+            found = true;
+          } else {
+            rows[i].style.display = "none";
+          }
+        }
+      }
+
+      if (!found && filter !== "") {
+        alert("Product not available");
+      }
+    }
+
+    // Load stock on page load
+    window.onload = loadStock;
+  </script>
+
+</body>
+</html>

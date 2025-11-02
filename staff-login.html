@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Staff Login - SmartTrack</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      font-family: 'Poppins', sans-serif;
+      background-color: #2a3f5f; /* solid indigo blue */
+      min-height: 100vh;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      color: #fff;
+    }
+
+    .login-box {
+      background: rgba(255, 255, 255, 0.06);
+      padding: 40px;
+      border-radius: 16px;
+      width: 100%;
+      max-width: 380px;
+      box-shadow: 0 10px 25px rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .login-box h2 {
+      text-align: center;
+      margin-bottom: 30px;
+      font-size: 28px;
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    .login-box input {
+      width: 100%;
+      padding: 14px;
+      margin-bottom: 10px;
+      background-color: rgba(255, 255, 255, 0.1);
+      border: none;
+      border-radius: 10px;
+      color: #fff;
+      font-size: 15px;
+      outline: none;
+    }
+
+    .login-box input::placeholder {
+      color: #ccc;
+    }
+
+    .login-box button {
+      width: 100%;
+      padding: 14px;
+      background-color: #3d5a80; /* button: deep steel blue */
+      border: none;
+      border-radius: 10px;
+      font-size: 16px;
+      font-weight: 600;
+      color: #fff;
+      cursor: pointer;
+      transition: background 0.3s ease;
+      margin-top: 10px;
+    }
+
+    .login-box button:hover {
+      background-color: #517fa4;
+    }
+
+    .error-message {
+      color: #ff4d4d;
+      font-size: 14px;
+      margin-bottom: 10px;
+      display: none;
+    }
+    .back-btn {
+      position: absolute;
+      top: 20px;
+      left: 20px;
+      font-size: 32px;
+      font-weight: 900; /* Boldness */
+      color: white;
+      text-decoration: none;
+      transition: 0.3s;
+    }
+
+    .back-btn:hover {
+      transform: scale(1.15);
+      color:white;
+    }
+  </style>
+</head>
+<body>
+   <a href="index.html" class="back-btn">⮜</a>
+  <div class="login-box">
+    <h2>Staff Login</h2>
+    <form id="staffForm">
+      <input type="text" id="username" placeholder="User name" required />
+      <input type="password" id="password" placeholder="Password" required />
+      <div class="error-message" id="passError">❌ Password must be at least 6 characters and include 1 special character</div>
+
+      <button type="submit">Login</button>
+    </form>
+  </div>
+
+  <script>
+    const form = document.getElementById("staffForm");
+    const username = document.getElementById("username");
+    const password = document.getElementById("password");
+    const passError = document.getElementById("passError");
+
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+
+      passError.style.display = "none";
+
+      let isValid = true;
+
+      const pwd = password.value.trim();
+      const passwordRegex = /^(?=.*[!@#$%^&*])[A-Za-z\d!@#$%^&*]{6,}$/;
+      if (!passwordRegex.test(pwd)) {
+        passError.style.display = "block";
+        isValid = false;
+      }
+
+      if (isValid) {
+        fetch("/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            username: username.value.trim(),
+            password: password.value.trim()
+          })
+        })
+        .then(res => res.json())
+        .then(data => {
+          if (data.message === "Login successful") {
+            // ✅ Simple redirect to dashboard
+            window.location.href = "/staff-dashboard";
+          } else {
+            alert(data.error);
+          }
+        })
+        .catch(err => {
+          console.error(err);
+          alert("Server error occurred.");
+        });
+      }
+    });
+  </script>
+</body>
+</html>
