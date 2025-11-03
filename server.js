@@ -1,6 +1,5 @@
 const express = require("express");
 const mongoose = require("mongoose");
-const nodemailer = require("nodemailer");
 const cors = require("cors");
 const path = require("path");
 const session = require("express-session");
@@ -99,45 +98,31 @@ const requireStaffAuth = (req, res, next) => {
 
 // ----------------- EMAIL CONFIGURATION -----------------
 // ----------------- EMAIL CONFIGURATION -----------------
-import Brevo from "@getbrevo/brevo";
+const Brevo = require("@getbrevo/brevo");
 
 const brevoClient = new Brevo.TransactionalEmailsApi();
 brevoClient.setApiKey(Brevo.TransactionalEmailsApiApiKeys.apiKey, process.env.BREVO_API_KEY);
 
-export const sendEmail = async (toEmail, subject, htmlContent) => {
+async function sendEmail(mailOptions) {
   try {
     await brevoClient.sendTransacEmail({
-      sender: { email: "your_verified_email@brevo.com", name: "SmartTrack System" },
-      to: [{ email: toEmail }],
-      subject: subject,
-      htmlContent: htmlContent,
+      sender: { email: process.env.ADMIN_EMAIL, name: "SmartTrack System" },
+      to: [{ email: mailOptions.to }],
+      subject: mailOptions.subject,
+      htmlContent: mailOptions.html,
     });
     console.log("✅ Email sent successfully via Brevo API!");
-  } catch (error) {
-    console.error("❌ Email sending failed:", error);
-  }
-};
-
-
-
-
-// ----------------- EMAIL FUNCTIONS -----------------
-const sendEmail = async (mailOptions) => {
-  try {
-    const transporter = createTransporter();
-    
-    // Verify transporter configuration
-    await transporter.verify();
-    console.log("✅ Email transporter is ready");
-    
-    const result = await transporter.sendMail(mailOptions);
-    console.log(`✅ Email sent successfully: ${result.messageId}`);
-    return { success: true, messageId: result.messageId };
+    return { success: true };
   } catch (error) {
     console.error("❌ Email sending failed:", error);
     return { success: false, error: error.message };
   }
-};
+}
+
+
+
+// ----------------- EMAIL FUNCTIONS -----------------
+
 
 const sendLowStockAlert = async (staffUsername, productName, currentQty, operationAmount) => {
   try {
@@ -627,6 +612,7 @@ app.listen(PORT, () => {
   console.log(`📧 Email User: ${process.env.EMAIL_USER}`);
   console.log(`👤 Admin Email: ${process.env.ADMIN_EMAIL}`);
 });
+
 
 
 
