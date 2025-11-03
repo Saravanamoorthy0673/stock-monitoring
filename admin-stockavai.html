@@ -74,6 +74,19 @@
       align-self: center;
       margin-top: 15px;
     }
+    .low-stock {
+      color: #ff6b6b;
+      font-weight: bold;
+    }
+    .critical-stock {
+      color: #ff0000;
+      font-weight: bold;
+      animation: blink 1s infinite;
+    }
+    @keyframes blink {
+      0%, 50% { opacity: 1; }
+      51%, 100% { opacity: 0.7; }
+    }
   </style>
 </head>
 <body>
@@ -93,6 +106,7 @@
         <tr>
           <th>Product</th>
           <th>Available Qty (Kg)</th>
+          <th>Status</th>
         </tr>
       </thead>
       <tbody id="stockTableBody">
@@ -102,10 +116,11 @@
   </div>
 
   <!-- 🔙 Back -->
-  <a class="back-btn" href="admin-dashboard.html">← Back to Dashboard</a>
+  <a class="back-btn" href="/admin-dashboard">← Back to Dashboard</a>
 
   <script>
-    const API_BASE = "http://localhost:5000/api/stock";
+    // ✅ FIXED: Use relative path instead of localhost:5000
+    const API_BASE = "/api/stock";
     const tbody = document.getElementById("stockTableBody");
     const searchInput = document.getElementById("searchInput");
     let stockData = [];
@@ -123,14 +138,28 @@
     function renderTable(data) {
       tbody.innerHTML = "";
       if (data.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="2">No stock found</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="3">No stock found</td></tr>`;
         return;
       }
       data.forEach((item) => {
+        // Determine stock status
+        let statusClass = '';
+        let statusText = '';
+        if (item.qty < 100) {
+          statusClass = 'critical-stock';
+          statusText = 'CRITICAL';
+        } else if (item.qty < 200) {
+          statusClass = 'low-stock';
+          statusText = 'LOW';
+        } else {
+          statusText = 'NORMAL';
+        }
+
         const row = `
           <tr>
             <td>${item.name}</td>
-            <td>${item.qty}</td>
+            <td class="${statusClass}">${item.qty}</td>
+            <td class="${statusClass}">${statusText}</td>
           </tr>`;
         tbody.innerHTML += row;
       });
@@ -143,6 +172,9 @@
       );
       renderTable(filtered);
     }
+
+    // Auto-refresh every 10 seconds to get latest data
+    setInterval(loadStock, 10000);
 
     window.onload = loadStock;
   </script>
