@@ -105,6 +105,8 @@ const createTransporter = () => {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
     },
+    debug: true,
+    logger: true
   });
 };
 
@@ -118,7 +120,7 @@ const sendEmail = async (mailOptions) => {
     console.log("✅ Email transporter is ready");
     
     const result = await transporter.sendMail(mailOptions);
-    console.log(✅ Email sent successfully: ${result.messageId});
+    console.log(`✅ Email sent successfully: ${result.messageId}`);
     return { success: true, messageId: result.messageId };
   } catch (error) {
     console.error("❌ Email sending failed:", error);
@@ -144,7 +146,7 @@ const sendLowStockAlert = async (staffUsername, productName, currentQty, operati
       productName: productName,
       quantity: operationAmount,
       currentStock: currentQty,
-      message: Low stock alert: ${productName} is now at ${currentQty}kg after reduction of ${operationAmount}kg
+      message: `Low stock alert: ${productName} is now at ${currentQty}kg after reduction of ${operationAmount}kg`
     });
     await lowStockEnquiry.save();
     console.log("✅ Low stock alert stored in database");
@@ -152,9 +154,9 @@ const sendLowStockAlert = async (staffUsername, productName, currentQty, operati
     const currentDate = new Date().toLocaleString();
     
     const mailOptions = {
-      from: "SmartTrack Alert System" <${process.env.EMAIL_USER}>,
+      from: `"SmartTrack Alert System" <${process.env.EMAIL_USER}>`,
       to: process.env.ADMIN_EMAIL,
-      subject: 🚨 LOW STOCK ALERT: ${productName} below 200kg,
+      subject: `🚨 LOW STOCK ALERT: ${productName} below 200kg`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #e74c3c; text-align: center;">🚨 LOW STOCK ALERT</h2>
@@ -162,7 +164,7 @@ const sendLowStockAlert = async (staffUsername, productName, currentQty, operati
             <h3 style="color: #2c3e50; margin-top: 0;">Product: ${productName}</h3>
             <p style="margin: 8px 0;"><strong>📊 Current Quantity:</strong> ${currentQty} kg</p>
             <p style="margin: 8px 0;"><strong>📉 Reduced By:</strong> ${operationAmount} kg</p>
-            <p style="margin: 8px 0;"><strong>⚠ Status:</strong> ${currentQty < 100 ? 'CRITICALLY LOW' : 'LOW STOCK'}</p>
+            <p style="margin: 8px 0;"><strong>⚠️ Status:</strong> ${currentQty < 100 ? 'CRITICALLY LOW' : 'LOW STOCK'}</p>
             <hr style="border: none; border-top: 1px solid #ddd;">
             <p style="margin: 8px 0;"><strong>👤 Staff Name:</strong> ${staff.name}</p>
             <p style="margin: 8px 0;"><strong>📧 Staff Email:</strong> ${staff.email}</p>
@@ -196,9 +198,9 @@ This is an automated alert from SmartTrack Inventory System.
 
     const emailResult = await sendEmail(mailOptions);
     if (emailResult.success) {
-      console.log(✅ Low stock alert email sent for ${productName} (${currentQty}kg));
+      console.log(`✅ Low stock alert email sent for ${productName} (${currentQty}kg)`);
     } else {
-      console.error(❌ Failed to send low stock alert email: ${emailResult.error});
+      console.error(`❌ Failed to send low stock alert email: ${emailResult.error}`);
     }
     
   } catch (error) {
@@ -302,9 +304,9 @@ app.post("/api/enquiries", requireStaffAuth, async (req, res) => {
 
     // Send email notification to admin
     const mailOptions = {
-      from: "SmartTrack Enquiry System" <${process.env.EMAIL_USER}>,
+      from: `"SmartTrack Enquiry System" <${process.env.EMAIL_USER}>`,
       to: process.env.ADMIN_EMAIL,
-      subject: 📧 New Product Enquiry: ${productName},
+      subject: `📧 New Product Enquiry: ${productName}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
           <h2 style="color: #007bff; text-align: center;">📧 NEW PRODUCT ENQUIRY</h2>
@@ -330,7 +332,7 @@ app.post("/api/enquiries", requireStaffAuth, async (req, res) => {
     if (emailResult.success) {
       console.log("✅ Staff enquiry email sent to admin");
     } else {
-      console.error(❌ Failed to send staff enquiry email: ${emailResult.error});
+      console.error(`❌ Failed to send staff enquiry email: ${emailResult.error}`);
     }
 
     res.json({ success: true, message: "Enquiry submitted successfully!" });
@@ -389,7 +391,7 @@ app.post("/api/staff/register", async (req, res) => {
 
     // Send email with credentials
     const mailOptions = {
-      from: "SmartTrack Admin" <${process.env.EMAIL_USER}>,
+      from: `"SmartTrack Admin" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: "Your Staff Credentials - SmartTrack",
       html: `
@@ -479,7 +481,7 @@ app.post("/api/stock/add", async (req, res) => {
     return res.status(400).json({ error: "Invalid input" });
 
   try {
-    let stock = await Stock.findOne({ name: new RegExp(^${name}$, "i") });
+    let stock = await Stock.findOne({ name: new RegExp(`^${name}$`, "i") });
     let operation = stock ? "Increase" : "Add";
 
     if (stock) stock.qty += qty;
@@ -565,7 +567,7 @@ app.get("/api/history", async (req, res) => {
     }
 
     const logs = await StockLog.find(filter).sort({ timestamp: -1 });
-    console.log(📦 History logs fetched: ${logs.length} record(s));
+    console.log(`📦 History logs fetched: ${logs.length} record(s)`);
     res.json(logs);
   } catch (err) {
     console.error("❌ Error fetching history logs:", err);
@@ -577,7 +579,7 @@ app.get("/api/history", async (req, res) => {
 app.get("/test-email", async (req, res) => {
   try {
     const mailOptions = {
-      from: "SmartTrack Test" <${process.env.EMAIL_USER}>,
+      from: `"SmartTrack Test" <${process.env.EMAIL_USER}>`,
       to: process.env.ADMIN_EMAIL,
       subject: "📧 Test Email from SmartTrack",
       html: `
@@ -591,7 +593,7 @@ app.get("/test-email", async (req, res) => {
           </div>
         </div>
       `,
-      text: Test email from SmartTrack system. If you received this, email configuration is working!
+      text: `Test email from SmartTrack system. If you received this, email configuration is working!`
     };
 
     const emailResult = await sendEmail(mailOptions);
@@ -610,7 +612,7 @@ app.get("/test-email", async (req, res) => {
 const PORT = process.env.PORT || 5000;
 
 app.listen(PORT, () => {
-  console.log(🚀 Server running on port ${PORT});
-  console.log(📧 Email User: ${process.env.EMAIL_USER});
-  console.log(👤 Admin Email: ${process.env.ADMIN_EMAIL});
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📧 Email User: ${process.env.EMAIL_USER}`);
+  console.log(`👤 Admin Email: ${process.env.ADMIN_EMAIL}`);
 });
