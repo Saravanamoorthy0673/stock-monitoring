@@ -1,9 +1,9 @@
 const express = require("express");
 const mongoose = require("mongoose");
-const nodemailer = require("nodemailer");
 const cors = require("cors");
 const path = require("path");
 const session = require("express-session");
+const brevo = require('@getbrevo/brevo');
 require("dotenv").config();
 
 const app = express();
@@ -97,45 +97,47 @@ const requireStaffAuth = (req, res, next) => {
   }
 };
 
-// ----------------- NODEMAILER WITH BREVO SMTP -----------------
-const createTransporter = () => {
-  return nodemailer.createTransporter({
-    host: "smtp-relay.brevo.com",
-    port: 587,
-    secure: false,
-    auth: {
-      user: process.env.BREVO_SMTP_USER, // Your Brevo SMTP username
-      pass: process.env.BREVO_SMTP_KEY   // Your Brevo SMTP password
-    },
-    debug: true,
-    logger: true
-  });
-};
+// ----------------- BREVO API CONFIGURATION -----------------
+const defaultClient = brevo.ApiClient.instance;
+const apiKey = defaultClient.authentications['api-key'];
+apiKey.apiKey = process.env.BREVO_API_KEY;
 
-// ----------------- EMAIL FUNCTIONS -----------------
-const sendEmail = async (mailOptions) => {
+const apiInstance = new brevo.TransactionalEmailsApi();
+
+async function sendEmail(mailOptions) {
   try {
-    const transporter = createTransporter();
-    
-    console.log("📧 Attempting to send email via Brevo SMTP...");
-    console.log(`From: ${mailOptions.from}`);
+    console.log("📧 Attempting to send email via Brevo API...");
     console.log(`To: ${mailOptions.to}`);
     console.log(`Subject: ${mailOptions.subject}`);
     
-    // Verify transporter configuration
-    await transporter.verify();
-    console.log("✅ Email transporter is ready");
+    const sendSmtpEmail = new brevo.SendSmtpEmail();
+    sendSmtpEmail.sender = { 
+      email: process.env.EMAIL_USER, 
+      name: mailOptions.senderName || "SmartTrack System" 
+    };
+    sendSmtpEmail.to = [{ email: mailOptions.to }];
+    sendSmtpEmail.subject = mailOptions.subject;
+    sendSmtpEmail.htmlContent = mailOptions.html;
     
-    const result = await transporter.sendMail(mailOptions);
-    console.log(`✅ Email sent successfully: ${result.messageId}`);
-    console.log(`Response: ${result.response}`);
-    return { success: true, messageId: result.messageId, response: result.response };
+    if (mailOptions.text) {
+      sendSmtpEmail.textContent = mailOptions.text;
+    }
+
+    const data = await apiInstance.sendTransacEmail(sendSmtpEmail);
+    console.log("✅ Email sent successfully via Brevo API!");
+    console.log("Message ID:", data.messageId);
+    return { success: true, messageId: data.messageId };
   } catch (error) {
-    console.error("❌ Email sending failed:", error);
+    console.error("❌ Brevo API email sending failed:");
+    console.error("Error:", error.message);
+    if (error.response) {
+      console.error("Response:", error.response.body);
+    }
     return { success: false, error: error.message };
   }
-};
+}
 
+// ----------------- EMAIL FUNCTIONS -----------------
 const sendLowStockAlert = async (staffUsername, productName, currentQty, operationAmount) => {
   try {
     // Get staff details
@@ -162,8 +164,8 @@ const sendLowStockAlert = async (staffUsername, productName, currentQty, operati
     const currentDate = new Date().toLocaleString();
     
     const mailOptions = {
-      from: `"SmartTrack Alert System" <${process.env.EMAIL_USER}>`,
       to: process.env.ADMIN_EMAIL,
+      senderName: "SmartTrack Alert System",
       subject: `🚨 LOW STOCK ALERT: ${productName} below 200kg`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -295,8 +297,8 @@ app.post("/api/enquiries", requireStaffAuth, async (req, res) => {
 
     // Send email notification to admin
     const mailOptions = {
-      from: `"SmartTrack Enquiry System" <${process.env.EMAIL_USER}>`,
       to: process.env.ADMIN_EMAIL,
+      senderName: "SmartTrack Enquiry System",
       subject: `📧 New Product Enquiry: ${productName}`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -333,11 +335,10 @@ app.post("/api/enquiries", requireStaffAuth, async (req, res) => {
   }
 });
 
-// ----------------- ✅ ADMIN LOGIN ROUTE - FIXED -----------------
+// ----------------- ✅ ADMIN LOGIN ROUTE -----------------
 app.post("/admin-login", (req, res) => {
   const { email, password } = req.body;
 
-  // ✅ FIXED: Using correct variable names
   if (email === process.env.ADMIN_EMAIL && password === process.env.ADMIN_PASSWORD) {
     req.session.admin = email;
     return res.json({ success: true, message: "Admin login successful" });
@@ -369,8 +370,19 @@ app.post("/staff-logout", (req, res) => {
 // ----------------- STAFF REGISTER -----------------
 app.post("/api/staff/register", async (req, res) => {
   try {
+    console.log("📝 Staff registration attempt:", req.body);
+    
     const { name, phone, email, username, password } = req.body;
     
+    // Validate required fields
+    if (!name || !phone || !email || !username || !password) {
+      console.log("❌ Missing required fields");
+      return res.status(400).json({ 
+        success: false, 
+        message: "All fields are required: name, phone, email, username, password" 
+      });
+    }
+
     // Check if staff already exists
     const existing = await Staff.findOne({ $or: [{ email }, { username }] });
     if (existing) {
@@ -383,8 +395,8 @@ app.post("/api/staff/register", async (req, res) => {
 
     // Send email with credentials
     const mailOptions = {
-      from: `"SmartTrack Admin" <${process.env.EMAIL_USER}>`,
       to: email,
+      senderName: "SmartTrack Admin",
       subject: "Your Staff Credentials - SmartTrack",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -556,8 +568,8 @@ app.get("/api/history", async (req, res) => {
 app.get("/test-email", async (req, res) => {
   try {
     const mailOptions = {
-      from: `"SmartTrack Test" <${process.env.EMAIL_USER}>`,
       to: process.env.ADMIN_EMAIL,
+      senderName: "SmartTrack Test",
       subject: "📧 Test Email from SmartTrack",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -569,8 +581,7 @@ app.get("/test-email", async (req, res) => {
             <p style="margin: 8px 0;">If you received this email, your email configuration is working correctly!</p>
           </div>
         </div>
-      `,
-      text: `Test email from SmartTrack system. If you received this, email configuration is working!`
+      `
     };
 
     const emailResult = await sendEmail(mailOptions);
@@ -592,4 +603,5 @@ app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📧 Email User: ${process.env.EMAIL_USER}`);
   console.log(`👤 Admin Email: ${process.env.ADMIN_EMAIL}`);
-});log says staff registered but it not stored and email not sending
+  console.log(`🔑 Brevo API Key: ${process.env.BREVO_API_KEY ? 'Set' : 'Not Set'}`);
+});
