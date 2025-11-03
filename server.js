@@ -1,9 +1,9 @@
 const express = require("express");
 const mongoose = require("mongoose");
+const nodemailer = require("nodemailer");
 const cors = require("cors");
 const path = require("path");
 const session = require("express-session");
-const brevo = require('@getbrevo/brevo');
 require("dotenv").config();
 
 const app = express();
@@ -97,47 +97,45 @@ const requireStaffAuth = (req, res, next) => {
   }
 };
 
-// ----------------- BREVO EMAIL CONFIGURATION -----------------
-const defaultClient = brevo.ApiClient.instance;
-const apiKey = defaultClient.authentications['api-key'];
-apiKey.apiKey = process.env.BREVO_API_KEY;
+// ----------------- NODEMAILER WITH BREVO SMTP -----------------
+const createTransporter = () => {
+  return nodemailer.createTransporter({
+    host: "smtp-relay.brevo.com",
+    port: 587,
+    secure: false,
+    auth: {
+      user: process.env.BREVO_SMTP_USER, // Your Brevo SMTP username
+      pass: process.env.BREVO_SMTP_KEY   // Your Brevo SMTP password
+    },
+    debug: true,
+    logger: true
+  });
+};
 
-const apiInstance = new brevo.TransactionalEmailsApi();
-
-async function sendEmail(mailOptions) {
+// ----------------- EMAIL FUNCTIONS -----------------
+const sendEmail = async (mailOptions) => {
   try {
-    console.log("📧 Attempting to send email via Brevo...");
+    const transporter = createTransporter();
+    
+    console.log("📧 Attempting to send email via Brevo SMTP...");
+    console.log(`From: ${mailOptions.from}`);
     console.log(`To: ${mailOptions.to}`);
     console.log(`Subject: ${mailOptions.subject}`);
     
-    const sendSmtpEmail = new brevo.SendSmtpEmail();
-    sendSmtpEmail.sender = { 
-      email: process.env.EMAIL_USER, 
-      name: mailOptions.senderName || "SmartTrack System" 
-    };
-    sendSmtpEmail.to = [{ email: mailOptions.to }];
-    sendSmtpEmail.subject = mailOptions.subject;
-    sendSmtpEmail.htmlContent = mailOptions.html;
+    // Verify transporter configuration
+    await transporter.verify();
+    console.log("✅ Email transporter is ready");
     
-    if (mailOptions.text) {
-      sendSmtpEmail.textContent = mailOptions.text;
-    }
-
-    const data = await apiInstance.sendTransacEmail(sendSmtpEmail);
-    console.log("✅ Email sent successfully via Brevo API!");
-    console.log("Message ID:", data.messageId);
-    return { success: true, messageId: data.messageId };
+    const result = await transporter.sendMail(mailOptions);
+    console.log(`✅ Email sent successfully: ${result.messageId}`);
+    console.log(`Response: ${result.response}`);
+    return { success: true, messageId: result.messageId, response: result.response };
   } catch (error) {
-    console.error("❌ Brevo email sending failed:");
-    console.error("Error:", error.message);
-    if (error.response) {
-      console.error("Response:", error.response.body);
-    }
+    console.error("❌ Email sending failed:", error);
     return { success: false, error: error.message };
   }
-}
+};
 
-// ----------------- EMAIL FUNCTIONS -----------------
 const sendLowStockAlert = async (staffUsername, productName, currentQty, operationAmount) => {
   try {
     // Get staff details
@@ -164,8 +162,8 @@ const sendLowStockAlert = async (staffUsername, productName, currentQty, operati
     const currentDate = new Date().toLocaleString();
     
     const mailOptions = {
+      from: `"SmartTrack Alert System" <${process.env.EMAIL_USER}>`,
       to: process.env.ADMIN_EMAIL,
-      senderName: "SmartTrack Alert System",
       subject: `🚨 LOW STOCK ALERT: ${productName} below 200kg`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -201,171 +199,7 @@ const sendLowStockAlert = async (staffUsername, productName, currentQty, operati
   }
 };
 
-// ----------------- ROUTES -----------------
-app.get("/", (req, res) => res.sendFile(path.join(__dirname, "index.html")));
-app.get("/admin-login", (req, res) => res.sendFile(path.join(__dirname, "admin-login.html")));
-app.get("/staff-login", (req, res) => res.sendFile(path.join(__dirname, "staff-login.html")));
-
-// ✅ STAFF CREDENTIAL ROUTE - Using your actual filename
-app.get("/staff_credential", requireAdminAuth, (req, res) => {
-  res.sendFile(path.join(__dirname, "staff_credential.html"));
-});
-
-// STAFF DASHBOARD ROUTES
-app.post("/staff-dashboard", (req, res) => {
-  if (req.session.username) {
-    res.sendFile(path.join(__dirname, "staff-dashboard.html"));
-  } else {
-    res.redirect("/staff-login");
-  }
-});
-
-app.get("/staff-dashboard", requireStaffAuth, (req, res) => {
-  res.sendFile(path.join(__dirname, "staff-dashboard.html"));
-});
-
-// STAFF STOCK AVAILABILITY ROUTES
-app.get("/staff-stockavai", requireStaffAuth, (req, res) => {
-  res.sendFile(path.join(__dirname, "staff-stockavai.html"));
-});
-
-app.post("/staff-stockavai", requireStaffAuth, (req, res) => {
-  res.sendFile(path.join(__dirname, "staff-stockavai.html"));
-});
-
-// STAFF ENQUIRY ROUTE
-app.get("/staff-enquiry", requireStaffAuth, (req, res) => {
-  res.sendFile(path.join(__dirname, "staff-enquiry.html"));
-});
-
-// ADMIN ENQUIRY ROUTE
-app.get("/admin-enquiry", requireAdminAuth, (req, res) => {
-  res.sendFile(path.join(__dirname, "admin-enquiry.html"));
-});
-
-// ADMIN DASHBOARD ROUTES
-app.post("/admin-dashboard", (req, res) => {
-  if (req.session.admin) {
-    res.sendFile(path.join(__dirname, "admin-dashboard.html"));
-  } else {
-    res.redirect("/admin-login");
-  }
-});
-
-app.get("/admin-dashboard", requireAdminAuth, (req, res) => {
-  res.sendFile(path.join(__dirname, "admin-dashboard.html"));
-});
-
-app.get("/admin-stockavai", requireAdminAuth, (req, res) => res.sendFile(path.join(__dirname, "admin-stockavai.html")));
-app.get("/admin-history", requireAdminAuth, (req, res) => res.sendFile(path.join(__dirname, "admin-history.html")));
-
-// ----------------- ✅ ENQUIRY ROUTES -----------------
-// ✅ GET ALL ENQUIRIES (for admin page)
-app.get("/api/enquiries", requireAdminAuth, async (req, res) => {
-  try {
-    const enquiries = await Enquiry.find().sort({ timestamp: -1 });
-    res.json(enquiries);
-  } catch (err) {
-    console.error("Error fetching enquiries:", err);
-    res.status(500).json({ error: "Server error" });
-  }
-});
-
-// ✅ SUBMIT STAFF ENQUIRY
-app.post("/api/enquiries", requireStaffAuth, async (req, res) => {
-  try {
-    const { name, email, productName, quantity, message } = req.body;
-    
-    // Get staff details from session
-    const staff = await Staff.findOne({ username: req.session.username });
-    if (!staff) {
-      return res.status(400).json({ error: "Staff not found" });
-    }
-
-    const enquiry = new Enquiry({
-      type: 'staff_enquiry',
-      staffName: name,
-      staffEmail: email,
-      staffUsername: req.session.username,
-      productName: productName,
-      quantity: quantity,
-      message: message
-    });
-
-    await enquiry.save();
-    console.log("✅ Staff enquiry stored in database");
-
-    // Send email notification to admin
-    const mailOptions = {
-      to: process.env.ADMIN_EMAIL,
-      senderName: "SmartTrack Enquiry System",
-      subject: `📧 New Product Enquiry: ${productName}`,
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #007bff; text-align: center;">📧 NEW PRODUCT ENQUIRY</h2>
-          <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; border-left: 4px solid #007bff;">
-            <h3 style="color: #2c3e50; margin-top: 0;">Product: ${productName}</h3>
-            <p style="margin: 8px 0;"><strong>📦 Quantity Needed:</strong> ${quantity} kg</p>
-            <hr style="border: none; border-top: 1px solid #ddd;">
-            <p style="margin: 8px 0;"><strong>👤 Staff Name:</strong> ${name}</p>
-            <p style="margin: 8px 0;"><strong>📧 Staff Email:</strong> ${email}</p>
-            <p style="margin: 8px 0;"><strong>👨‍💼 Staff Username:</strong> ${req.session.username}</p>
-            <hr style="border: none; border-top: 1px solid #ddd;">
-            <p style="margin: 8px 0;"><strong>💬 Message:</strong></p>
-            <div style="background: white; padding: 10px; border-radius: 5px; border: 1px solid #ddd;">
-              ${message}
-            </div>
-            <p style="margin: 8px 0;"><strong>🕐 Time & Date:</strong> ${new Date().toLocaleString()}</p>
-          </div>
-        </div>
-      `
-    };
-
-    const emailResult = await sendEmail(mailOptions);
-    if (emailResult.success) {
-      console.log("✅ Staff enquiry email sent to admin");
-    } else {
-      console.error(`❌ Failed to send staff enquiry email: ${emailResult.error}`);
-    }
-
-    res.json({ success: true, message: "Enquiry submitted successfully!" });
-  } catch (err) {
-    console.error("Error submitting enquiry:", err);
-    res.status(500).json({ error: "Server error" });
-  }
-});
-
-// ----------------- ✅ ADMIN LOGIN ROUTE -----------------
-app.post("/admin-login", (req, res) => {
-  const { email, password } = req.body;
-
-  if (email === process.env.ADMIN_EMAIL && password === process.env.ADMIN_PASSWORD) {
-    req.session.admin = email;
-    return res.json({ success: true, message: "Admin login successful" });
-  } else {
-    return res.json({ success: false, message: "Invalid email or password" });
-  }
-});
-
-// ----------------- ADMIN LOGOUT -----------------
-app.post("/admin-logout", (req, res) => {
-  req.session.destroy((err) => {
-    if (err) {
-      return res.status(500).json({ success: false, message: "Logout failed" });
-    }
-    res.json({ success: true, message: "Logout successful" });
-  });
-});
-
-// ----------------- STAFF LOGOUT -----------------
-app.post("/staff-logout", (req, res) => {
-  req.session.destroy((err) => {
-    if (err) {
-      return res.status(500).json({ success: false, message: "Logout failed" });
-    }
-    res.json({ success: true, message: "Logout successful" });
-  });
-});
+// ... (KEEP ALL YOUR EXISTING ROUTES EXACTLY AS THEY ARE)
 
 // ----------------- STAFF REGISTER -----------------
 app.post("/api/staff/register", async (req, res) => {
@@ -384,8 +218,8 @@ app.post("/api/staff/register", async (req, res) => {
 
     // Send email with credentials
     const mailOptions = {
+      from: `"SmartTrack Admin" <${process.env.EMAIL_USER}>`,
       to: email,
-      senderName: "SmartTrack Admin",
       subject: "Your Staff Credentials - SmartTrack",
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -426,164 +260,7 @@ app.post("/api/staff/register", async (req, res) => {
   }
 });
 
-// ----------------- STAFF LOGIN -----------------
-app.post("/login", async (req, res) => {
-  const { username, password } = req.body;
-  try {
-    const staff = await Staff.findOne({ username });
-    if (!staff) return res.status(400).json({ error: "User not found" });
-    if (staff.password !== password) return res.status(400).json({ error: "Invalid password" });
-
-    req.session.username = staff.username;
-    res.json({ message: "Login successful" });
-  } catch (err) {
-    console.error("Login Error:", err);
-    res.status(500).json({ error: "Server error" });
-  }
-});
-
-// ----------------- STOCK MANAGEMENT -----------------
-app.get("/api/stock", async (req, res) => {
-  try {
-    const stockItems = await Stock.find({});
-    res.json(stockItems);
-  } catch (err) {
-    console.error("Stock Fetch Error:", err);
-    res.status(500).json({ error: "Server error" });
-  }
-});
-
-app.post("/api/stock/add", async (req, res) => {
-  const { name, qty } = req.body;
-  if (!name || isNaN(qty) || qty < 0)
-    return res.status(400).json({ error: "Invalid input" });
-
-  try {
-    let stock = await Stock.findOne({ name: new RegExp(`^${name}$`, "i") });
-    let operation = stock ? "Increase" : "Add";
-
-    if (stock) stock.qty += qty;
-    else stock = new Stock({ name, qty });
-
-    await stock.save();
-
-    await new StockLog({
-      productName: name,
-      operation,
-      amount: qty,
-      staffName: req.session.username || "Unknown Staff",
-    }).save();
-
-    res.json({ message: "Stock added/updated", stock });
-  } catch (err) {
-    console.error("Add Stock Error:", err);
-    res.status(500).json({ error: "Server error" });
-  }
-});
-
-app.post("/api/stock/increase", async (req, res) => {
-  const { name, amount } = req.body;
-  try {
-    const stock = await Stock.findOne({ name });
-    if (!stock) return res.status(404).json({ error: "Product not found" });
-
-    stock.qty += amount;
-    await stock.save();
-
-    await new StockLog({
-      productName: name,
-      operation: "Increase",
-      amount,
-      staffName: req.session.username || "Unknown Staff",
-    }).save();
-
-    res.json({ message: "Quantity increased", stock });
-  } catch (err) {
-    console.error("Increase Stock Error:", err);
-    res.status(500).json({ error: "Server error" });
-  }
-});
-
-app.post("/api/stock/decrease", async (req, res) => {
-  const { name, amount } = req.body;
-  try {
-    const stock = await Stock.findOne({ name });
-    if (!stock) return res.status(404).json({ error: "Product not found" });
-    if (stock.qty < amount) return res.status(400).json({ error: "Not enough stock" });
-
-    const oldQty = stock.qty;
-    stock.qty -= amount;
-    await stock.save();
-
-    // ✅ Check if stock goes below 200kg and send email alert + store enquiry
-    if (stock.qty < 200 && req.session.username) {
-      await sendLowStockAlert(req.session.username, name, stock.qty, amount);
-    }
-
-    await new StockLog({
-      productName: name,
-      operation: "Decrease",
-      amount,
-      staffName: req.session.username || "Unknown Staff",
-    }).save();
-
-    res.json({ message: "Quantity decreased", stock });
-  } catch (err) {
-    console.error("Decrease Stock Error:", err);
-    res.status(500).json({ error: "Server error" });
-  }
-});
-
-// ----------------- HISTORY -----------------
-app.get("/api/history", async (req, res) => {
-  try {
-    const { staff } = req.query;
-    let filter = {};
-
-    if (staff && staff.trim() !== "") {
-      filter.staffName = new RegExp(staff.trim(), "i"); // case-insensitive
-    }
-
-    const logs = await StockLog.find(filter).sort({ timestamp: -1 });
-    console.log(`📦 History logs fetched: ${logs.length} record(s)`);
-    res.json(logs);
-  } catch (err) {
-    console.error("❌ Error fetching history logs:", err);
-    res.status(500).json({ error: "Server error" });
-  }
-});
-
-// ----------------- TEST EMAIL ROUTE -----------------
-app.get("/test-email", async (req, res) => {
-  try {
-    const mailOptions = {
-      to: process.env.ADMIN_EMAIL,
-      senderName: "SmartTrack Test",
-      subject: "📧 Test Email from SmartTrack",
-      html: `
-        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
-          <h2 style="color: #28a745; text-align: center;">✅ Email Test Successful</h2>
-          <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; border-left: 4px solid #28a745;">
-            <p style="margin: 8px 0;"><strong>📧 From:</strong> ${process.env.EMAIL_USER}</p>
-            <p style="margin: 8px 0;"><strong>📨 To:</strong> ${process.env.ADMIN_EMAIL}</p>
-            <p style="margin: 8px 0;"><strong>🕐 Time:</strong> ${new Date().toLocaleString()}</p>
-            <p style="margin: 8px 0;">If you received this email, your email configuration is working correctly!</p>
-          </div>
-        </div>
-      `
-    };
-
-    const emailResult = await sendEmail(mailOptions);
-    if (emailResult.success) {
-      res.json({ success: true, message: "Test email sent successfully! Check your inbox." });
-    } else {
-      res.status(500).json({ success: false, message: "Failed to send test email: " + emailResult.error });
-    }
-  } catch (error) {
-    console.error("Test email error:", error);
-    res.status(500).json({ success: false, message: "Email error: " + error.message });
-  }
-});
+// ... (KEEP ALL OTHER ROUTES THE SAME)
 
 // ----------------- SERVER START -----------------
 const PORT = process.env.PORT || 5000;
@@ -592,5 +269,4 @@ app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📧 Email User: ${process.env.EMAIL_USER}`);
   console.log(`👤 Admin Email: ${process.env.ADMIN_EMAIL}`);
-  console.log(`🔑 Brevo API Key: ${process.env.BREVO_API_KEY ? 'Set' : 'Not Set'}`);
 });
