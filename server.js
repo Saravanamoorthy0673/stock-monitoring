@@ -98,17 +98,21 @@ const requireStaffAuth = (req, res, next) => {
 };
 
 // ----------------- EMAIL CONFIGURATION -----------------
+// ----------------- EMAIL CONFIGURATION -----------------
 const createTransporter = () => {
-  return nodemailer.createTransporter({
-    service: "gmail",
+  return nodemailer.createTransport({
+    host: "smtp.gmail.com",
+    port: 465,              // Secure port for Gmail
+    secure: true,           // Use SSL
     auth: {
       user: process.env.EMAIL_USER,
       pass: process.env.EMAIL_PASS,
     },
-    debug: true,
+    debug: true,            // Enable detailed logs
     logger: true
   });
 };
+
 
 // ----------------- EMAIL FUNCTIONS -----------------
 const sendEmail = async (mailOptions) => {
@@ -616,3 +620,4 @@ app.listen(PORT, () => {
   console.log(`📧 Email User: ${process.env.EMAIL_USER}`);
   console.log(`👤 Admin Email: ${process.env.ADMIN_EMAIL}`);
 });
+
