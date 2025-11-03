@@ -99,22 +99,25 @@ const requireStaffAuth = (req, res, next) => {
 
 // ----------------- EMAIL CONFIGURATION -----------------
 // ----------------- EMAIL CONFIGURATION -----------------
-const createTransporter = () => {
-  return nodemailer.createTransport({
-    host: "smtp-relay.brevo.com",
-    port: 587,
-    secure: false, // use TLS, not SSL
-    auth: {
-      user: process.env.EMAIL_USER, // example: 9aa473001@smtp-brevo.com
-      pass: process.env.EMAIL_PASS  // your Brevo SMTP key
-    },
-    tls: {
-      rejectUnauthorized: false
-    },
-    debug: true,
-    logger: true
-  });
+import Brevo from "@getbrevo/brevo";
+
+const brevoClient = new Brevo.TransactionalEmailsApi();
+brevoClient.setApiKey(Brevo.TransactionalEmailsApiApiKeys.apiKey, process.env.BREVO_API_KEY);
+
+export const sendEmail = async (toEmail, subject, htmlContent) => {
+  try {
+    await brevoClient.sendTransacEmail({
+      sender: { email: "your_verified_email@brevo.com", name: "SmartTrack System" },
+      to: [{ email: toEmail }],
+      subject: subject,
+      htmlContent: htmlContent,
+    });
+    console.log("✅ Email sent successfully via Brevo API!");
+  } catch (error) {
+    console.error("❌ Email sending failed:", error);
+  }
 };
+
 
 
 
@@ -624,5 +627,6 @@ app.listen(PORT, () => {
   console.log(`📧 Email User: ${process.env.EMAIL_USER}`);
   console.log(`👤 Admin Email: ${process.env.ADMIN_EMAIL}`);
 });
+
 
 
