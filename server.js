@@ -24,12 +24,22 @@ app.use(
 );
 
 // ----------------- DATABASE -----------------
-mongoose.connect(process.env.MONGO_URI, {
-  useNewUrlParser: true,
-  useUnifiedTopology: true,
-  serverSelectionTimeoutMS: 30000, // 30 seconds
-}).then(() => console.log("✅ MongoDB Connected"))
-  .catch((err) => console.error("❌ MongoDB Error:", err));
+const connectDB = async () => {
+  try {
+    await mongoose.connect(process.env.MONGO_URI, {
+      useNewUrlParser: true,
+      useUnifiedTopology: true,
+      serverSelectionTimeoutMS: 50000,
+      socketTimeoutMS: 45000,
+    });
+    console.log("✅ MongoDB Connected to Atlas");
+  } catch (err) {
+    console.error("❌ MongoDB Connection Error:", err);
+    process.exit(1);
+  }
+};
+
+connectDB();
 
 // ----------------- SCHEMAS -----------------
 const stockSchema = new mongoose.Schema({
@@ -87,7 +97,35 @@ const requireStaffAuth = (req, res, next) => {
   }
 };
 
-// ----------------- EMAIL ALERT FUNCTION -----------------
+// ----------------- EMAIL CONFIGURATION -----------------
+const createTransporter = () => {
+  return nodemailer.createTransporter({
+    service: "gmail",
+    auth: {
+      user: process.env.EMAIL_USER,
+      pass: process.env.EMAIL_PASS,
+    },
+  });
+};
+
+// ----------------- EMAIL FUNCTIONS -----------------
+const sendEmail = async (mailOptions) => {
+  try {
+    const transporter = createTransporter();
+    
+    // Verify transporter configuration
+    await transporter.verify();
+    console.log("✅ Email transporter is ready");
+    
+    const result = await transporter.sendMail(mailOptions);
+    console.log(`✅ Email sent successfully: ${result.messageId}`);
+    return { success: true, messageId: result.messageId };
+  } catch (error) {
+    console.error("❌ Email sending failed:", error);
+    return { success: false, error: error.message };
+  }
+};
+
 const sendLowStockAlert = async (staffUsername, productName, currentQty, operationAmount) => {
   try {
     // Get staff details
@@ -109,21 +147,13 @@ const sendLowStockAlert = async (staffUsername, productName, currentQty, operati
       message: `Low stock alert: ${productName} is now at ${currentQty}kg after reduction of ${operationAmount}kg`
     });
     await lowStockEnquiry.save();
-
-    // Create email transporter
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
+    console.log("✅ Low stock alert stored in database");
 
     const currentDate = new Date().toLocaleString();
     
     const mailOptions = {
       from: `"SmartTrack Alert System" <${process.env.EMAIL_USER}>`,
-      to: process.env.ADMIN_EMAIL, // Send to admin
+      to: process.env.ADMIN_EMAIL,
       subject: `🚨 LOW STOCK ALERT: ${productName} below 200kg`,
       html: `
         <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -164,11 +194,15 @@ This is an automated alert from SmartTrack Inventory System.
       `
     };
 
-    await transporter.sendMail(mailOptions);
-    console.log(`✅ Low stock alert sent for ${productName} (${currentQty}kg)`);
+    const emailResult = await sendEmail(mailOptions);
+    if (emailResult.success) {
+      console.log(`✅ Low stock alert email sent for ${productName} (${currentQty}kg)`);
+    } else {
+      console.error(`❌ Failed to send low stock alert email: ${emailResult.error}`);
+    }
     
   } catch (error) {
-    console.error("❌ Error sending low stock alert:", error);
+    console.error("❌ Error in sendLowStockAlert:", error);
   }
 };
 
@@ -264,16 +298,9 @@ app.post("/api/enquiries", requireStaffAuth, async (req, res) => {
     });
 
     await enquiry.save();
+    console.log("✅ Staff enquiry stored in database");
 
     // Send email notification to admin
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
-
     const mailOptions = {
       from: `"SmartTrack Enquiry System" <${process.env.EMAIL_USER}>`,
       to: process.env.ADMIN_EMAIL,
@@ -299,7 +326,12 @@ app.post("/api/enquiries", requireStaffAuth, async (req, res) => {
       `
     };
 
-    await transporter.sendMail(mailOptions);
+    const emailResult = await sendEmail(mailOptions);
+    if (emailResult.success) {
+      console.log("✅ Staff enquiry email sent to admin");
+    } else {
+      console.error(`❌ Failed to send staff enquiry email: ${emailResult.error}`);
+    }
 
     res.json({ success: true, message: "Enquiry submitted successfully!" });
   } catch (err) {
@@ -344,34 +376,73 @@ app.post("/staff-logout", (req, res) => {
 app.post("/api/staff/register", async (req, res) => {
   try {
     const { name, phone, email, username, password } = req.body;
-    const existing = await Staff.findOne({ email });
-    if (existing)
-      return res.status(400).json({ success: false, message: "Staff already exists." });
+    
+    // Check if staff already exists
+    const existing = await Staff.findOne({ $or: [{ email }, { username }] });
+    if (existing) {
+      return res.status(400).json({ success: false, message: "Staff with this email or username already exists." });
+    }
 
     const staff = new Staff({ name, phone, email, username, password });
     await staff.save();
+    console.log("✅ Staff registered and saved to database");
 
-    // Send email
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASS,
-      },
-    });
-
+    // Send email with credentials
     const mailOptions = {
       from: `"SmartTrack Admin" <${process.env.EMAIL_USER}>`,
       to: email,
       subject: "Your Staff Credentials - SmartTrack",
-      text: `Hello ${name},\n\nYour SmartTrack staff account has been created.\n\nUsername: ${username}\nPassword: ${password}\n\n- SmartTrack Admin`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #2c3e50; text-align: center;">Welcome to SmartTrack!</h2>
+          <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; border-left: 4px solid #007bff;">
+            <h3 style="color: #2c3e50; margin-top: 0;">Your Staff Account Details</h3>
+            <p style="margin: 8px 0;"><strong>👤 Name:</strong> ${name}</p>
+            <p style="margin: 8px 0;"><strong>📧 Email:</strong> ${email}</p>
+            <p style="margin: 8px 0;"><strong>👨‍💼 Username:</strong> ${username}</p>
+            <p style="margin: 8px 0;"><strong>🔑 Password:</strong> ${password}</p>
+            <hr style="border: none; border-top: 1px solid #ddd;">
+            <p style="margin: 8px 0;"><strong>🔗 Login URL:</strong> ${req.headers.origin}/staff-login</p>
+            <div style="background: #e7f3ff; padding: 10px; border-radius: 5px; margin-top: 15px;">
+              <p style="margin: 0; color: #0056b3; font-weight: bold;">Keep these credentials secure and do not share them with anyone.</p>
+            </div>
+          </div>
+          <div style="text-align: center; margin-top: 20px; color: #7f8c8d;">
+            <p>SmartTrack Inventory Management System</p>
+          </div>
+        </div>
+      `,
+      text: `
+Welcome to SmartTrack!
+
+Your Staff Account Details:
+- Name: ${name}
+- Email: ${email}
+- Username: ${username}
+- Password: ${password}
+
+Login URL: ${req.headers.origin}/staff-login
+
+Keep these credentials secure and do not share them with anyone.
+
+- SmartTrack Admin
+      `
     };
 
-    await transporter.sendMail(mailOptions);
-    res.json({ success: true, message: "Staff registered & email sent!" });
+    const emailResult = await sendEmail(mailOptions);
+    if (emailResult.success) {
+      console.log("✅ Staff credentials email sent successfully");
+      res.json({ success: true, message: "Staff registered & credentials sent to email!" });
+    } else {
+      console.error("❌ Failed to send staff credentials email:", emailResult.error);
+      res.json({ 
+        success: true, 
+        message: "Staff registered but failed to send email. Please provide credentials manually." 
+      });
+    }
   } catch (err) {
     console.error("Registration Error:", err);
-    res.status(500).json({ success: false, message: "Server error" });
+    res.status(500).json({ success: false, message: "Server error during registration" });
   }
 });
 
@@ -502,7 +573,44 @@ app.get("/api/history", async (req, res) => {
   }
 });
 
+// ----------------- TEST EMAIL ROUTE -----------------
+app.get("/test-email", async (req, res) => {
+  try {
+    const mailOptions = {
+      from: `"SmartTrack Test" <${process.env.EMAIL_USER}>`,
+      to: process.env.ADMIN_EMAIL,
+      subject: "📧 Test Email from SmartTrack",
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2 style="color: #28a745; text-align: center;">✅ Email Test Successful</h2>
+          <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; border-left: 4px solid #28a745;">
+            <p style="margin: 8px 0;"><strong>📧 From:</strong> ${process.env.EMAIL_USER}</p>
+            <p style="margin: 8px 0;"><strong>📨 To:</strong> ${process.env.ADMIN_EMAIL}</p>
+            <p style="margin: 8px 0;"><strong>🕐 Time:</strong> ${new Date().toLocaleString()}</p>
+            <p style="margin: 8px 0;">If you received this email, your email configuration is working correctly!</p>
+          </div>
+        </div>
+      `,
+      text: `Test email from SmartTrack system. If you received this, email configuration is working!`
+    };
+
+    const emailResult = await sendEmail(mailOptions);
+    if (emailResult.success) {
+      res.json({ success: true, message: "Test email sent successfully! Check your inbox." });
+    } else {
+      res.status(500).json({ success: false, message: "Failed to send test email: " + emailResult.error });
+    }
+  } catch (error) {
+    console.error("Test email error:", error);
+    res.status(500).json({ success: false, message: "Email error: " + error.message });
+  }
+});
+
 // ----------------- SERVER START -----------------
 const PORT = process.env.PORT || 5000;
 
-app.listen(PORT, () => console.log(`🚀 Server running on http://localhost:${PORT}`));
+app.listen(PORT, () => {
+  console.log(`🚀 Server running on port ${PORT}`);
+  console.log(`📧 Email User: ${process.env.EMAIL_USER}`);
+  console.log(`👤 Admin Email: ${process.env.ADMIN_EMAIL}`);
+});
