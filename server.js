@@ -99,7 +99,7 @@ const requireStaffAuth = (req, res, next) => {
 
 // ----------------- NODEMAILER WITH BREVO SMTP -----------------
 const createTransporter = () => {
-  return nodemailer.createTransporter({
+  return nodemailer.createTransport({
     host: "smtp-relay.brevo.com",
     port: 587,
     secure: false,
@@ -111,6 +111,7 @@ const createTransporter = () => {
     logger: true
   });
 };
+
 
 // ----------------- EMAIL FUNCTIONS -----------------
 const sendEmail = async (mailOptions) => {
@@ -593,3 +594,4 @@ app.listen(PORT, () => {
   console.log(`📧 Email User: ${process.env.EMAIL_USER}`);
   console.log(`👤 Admin Email: ${process.env.ADMIN_EMAIL}`);
 });
+
