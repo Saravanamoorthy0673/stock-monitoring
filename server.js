@@ -100,7 +100,8 @@ const requireStaffAuth = (req, res, next) => {
 // ----------------- BREVO API CONFIGURATION -----------------
 const defaultClient = brevo.ApiClient.instance;
 const apiKey = defaultClient.authentications['api-key'];
-apiKey.apiKey = process.env.BREVO_SMTP_KEY;
+apiKey.apiKey = process.env.BREVO_API_KEY;
+
 
 const apiInstance = new brevo.TransactionalEmailsApi();
 
@@ -605,4 +606,5 @@ app.listen(PORT, () => {
   console.log(`👤 Admin Email: ${process.env.ADMIN_EMAIL}`);
   console.log(`🔑 Brevo API Key: ${process.env.BREVO_API_KEY ? 'Set' : 'Not Set'}`);
 });
+
 
