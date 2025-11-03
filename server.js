@@ -99,13 +99,13 @@ const requireStaffAuth = (req, res, next) => {
 
 // ----------------- NODEMAILER WITH BREVO SMTP -----------------
 const createTransporter = () => {
-  return nodemailer.createTransport({
+  return nodemailer.createTransporter({
     host: "smtp-relay.brevo.com",
     port: 587,
     secure: false,
     auth: {
-      user: process.env.BREVO_SMTP_USER,
-      pass: process.env.BREVO_SMTP_KEY
+      user: process.env.BREVO_SMTP_USER, // Your Brevo SMTP username
+      pass: process.env.BREVO_SMTP_KEY   // Your Brevo SMTP password
     },
     debug: true,
     logger: true
@@ -378,19 +378,8 @@ app.post("/api/staff/register", async (req, res) => {
     }
 
     const staff = new Staff({ name, phone, email, username, password });
-   await staff.save();
-console.log("✅ Staff registered and saved to database");
-
-// Send email in background — don’t block MongoDB
-sendEmail({
-  from: `"SmartTrack Admin" <${process.env.EMAIL_USER}>`,
-  to: email,
-  subject: "Your Staff Credentials - SmartTrack",
-  html: `...`
-}).then(result => {
-  console.log(result.success ? "✅ Email sent" : "❌ Email failed:", result.error);
-});
-
+    await staff.save();
+    console.log("✅ Staff registered and saved to database");
 
     // Send email with credentials
     const mailOptions = {
@@ -603,5 +592,4 @@ app.listen(PORT, () => {
   console.log(`🚀 Server running on port ${PORT}`);
   console.log(`📧 Email User: ${process.env.EMAIL_USER}`);
   console.log(`👤 Admin Email: ${process.env.ADMIN_EMAIL}`);
-});
-
+});log says staff registered but it not stored and email not sending
