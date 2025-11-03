@@ -101,17 +101,21 @@ const requireStaffAuth = (req, res, next) => {
 // ----------------- EMAIL CONFIGURATION -----------------
 const createTransporter = () => {
   return nodemailer.createTransport({
-    host: "smtp.gmail.com",
-    port: 465,              // Secure port for Gmail
-    secure: true,           // Use SSL
+    host: "smtp-relay.brevo.com",
+    port: 587,
+    secure: false, // use TLS, not SSL
     auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
+      user: process.env.EMAIL_USER, // example: 9aa473001@smtp-brevo.com
+      pass: process.env.EMAIL_PASS  // your Brevo SMTP key
     },
-    debug: true,            // Enable detailed logs
+    tls: {
+      rejectUnauthorized: false
+    },
+    debug: true,
     logger: true
   });
 };
+
 
 
 // ----------------- EMAIL FUNCTIONS -----------------
@@ -620,4 +624,5 @@ app.listen(PORT, () => {
   console.log(`📧 Email User: ${process.env.EMAIL_USER}`);
   console.log(`👤 Admin Email: ${process.env.ADMIN_EMAIL}`);
 });
+
 
