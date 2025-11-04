@@ -173,13 +173,13 @@ const sendLowStockAlert = async (staffUsername, productName, currentQty, operati
           <h2 style="color: #e74c3c; text-align: center;">🚨 LOW STOCK ALERT</h2>
           <div style="background: #f8f9fa; padding: 20px; border-radius: 10px; border-left: 4px solid #e74c3c;">
             <h3 style="color: #2c3e50; margin-top: 0;">Product: ${productName}</h3>
-            <p style="margin: 8px 0;"><strong>📊 Current Quantity:</strong> ${currentQty} kg</p>
-            <p style="margin: 8px 0;"><strong>📉 Reduced By:</strong> ${operationAmount} kg</p>
-            <p style="margin: 8px 0;"><strong>⚠️ Status:</strong> ${currentQty < 100 ? 'CRITICALLY LOW' : 'LOW STOCK'}</p>
+            <p style="margin: 8px 0;"><strong> Current Quantity:</strong> ${currentQty} kg</p>
+            <p style="margin: 8px 0;"><strong> Reduced By:</strong> ${operationAmount} kg</p>
+            <p style="margin: 8px 0;"><strong> Status:</strong> ${currentQty < 100 ? 'CRITICALLY LOW' : 'LOW STOCK'}</p>
             <hr style="border: none; border-top: 1px solid #ddd;">
-            <p style="margin: 8px 0;"><strong>👤 Staff Name:</strong> ${staff.name}</p>
-            <p style="margin: 8px 0;"><strong>📧 Staff Email:</strong> ${staff.email}</p>
-            <p style="margin: 8px 0;"><strong>👨‍💼 Staff Username:</strong> ${staff.username}</p>
+            <p style="margin: 8px 0;"><strong> Staff Name:</strong> ${staff.name}</p>
+            <p style="margin: 8px 0;"><strong> Staff Email:</strong> ${staff.email}</p>
+            <p style="margin: 8px 0;"><strong> Staff Username:</strong> ${staff.username}</p>
             <hr style="border: none; border-top: 1px solid #ddd;">
             <p style="margin: 8px 0;"><strong>🕐 Time & Date:</strong> ${currentDate}</p>
           </div>
@@ -606,5 +606,6 @@ app.listen(PORT, () => {
   console.log(`👤 Admin Email: ${process.env.ADMIN_EMAIL}`);
   console.log(`🔑 Brevo API Key: ${process.env.BREVO_API_KEY ? 'Set' : 'Not Set'}`);
 });
+
 
 
