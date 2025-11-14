@@ -93,6 +93,24 @@ const byproductLogSchema = new mongoose.Schema({
 
 const ByproductLog = mongoose.model("ByproductLog", byproductLogSchema);
 
+// ----------------- MIDDLEWARE -----------------
+const requireAdminAuth = (req, res, next) => {
+  if (req.session.admin) {
+    next();
+  } else {
+    res.redirect("/admin-login");
+  }
+};
+
+const requireStaffAuth = (req, res, next) => {
+  if (req.session.username) {
+    next();
+  } else {
+    res.redirect("/staff-login");
+  }
+};
+
+
 // ----------------- ✅ BYPRODUCT HISTORY ROUTE -----------------
 app.get("/api/byproduct/history", requireAdminAuth, async (req, res) => {
   try {
@@ -129,22 +147,6 @@ const byproductSchema = new mongoose.Schema({
 });
 const Byproduct = mongoose.model("Byproduct", byproductSchema);
 
-// ----------------- MIDDLEWARE -----------------
-const requireAdminAuth = (req, res, next) => {
-  if (req.session.admin) {
-    next();
-  } else {
-    res.redirect("/admin-login");
-  }
-};
-
-const requireStaffAuth = (req, res, next) => {
-  if (req.session.username) {
-    next();
-  } else {
-    res.redirect("/staff-login");
-  }
-};
 
 // ----------------- BREVO API CONFIGURATION -----------------
 const defaultClient = brevo.ApiClient.instance;
@@ -774,6 +776,7 @@ app.listen(PORT, () => {
   console.log(`👤 Admin Email: ${process.env.ADMIN_EMAIL}`);
   console.log(`🔑 Brevo API Key: ${process.env.BREVO_API_KEY ? 'Set' : 'Not Set'}`);
 });
+
 
 
 
