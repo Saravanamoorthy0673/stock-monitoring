@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Byproduct Tracking - SmartTrack</title>
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: #0b0c2a;
+      color: #fff;
+      text-align: center;
+      padding: 40px;
+    }
+
+    h1 {
+      font-size: 32px;
+      margin-bottom: 30px;
+      color: #ff9f43;
+    }
+
+    /* Centered Search Bar */
+    .search-bar {
+      text-align: center;
+      margin-bottom: 25px;
+    }
+
+    .search-bar input {
+      width: 300px;
+      padding: 10px 15px;
+      border: none;
+      border-radius: 6px;
+      font-size: 15px;
+      outline: none;
+    }
+
+    .form-section {
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+
+    input, select, button {
+      padding: 10px 15px;
+      border: none;
+      border-radius: 6px;
+      font-size: 15px;
+      outline: none;
+    }
+
+    input {
+      width: 180px;
+    }
+
+    .add-btn {
+      background: #ff6b81;
+      color: white;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+
+    .add-btn:hover {
+      background: #ff4757;
+    }
+
+    /* Scrollable table container */
+    .table-container {
+      width: 90%;
+      margin: 0 auto;
+      max-height: 400px; /* adjust as needed */
+      overflow-y: auto;
+      border-radius: 10px;
+      border: 1px solid #333;
+      background: #1a1b3a;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+
+    th, td {
+      padding: 15px;
+      border-bottom: 1px solid #333;
+      text-align: center;
+    }
+
+    th {
+      background: #20214a;
+      color: #ff9f43;
+      font-size: 17px;
+      text-transform: uppercase;
+      position: sticky;
+      top: 0;
+      z-index: 2;
+    }
+
+    td {
+      font-size: 15px;
+    }
+
+    .action-btn {
+      padding: 6px 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+      border: none;
+      margin: 0 3px;
+    }
+
+    .inc {
+      background: #2ed573;
+      color: white;
+    }
+
+    .dec {
+      background: #ff4757;
+      color: white;
+    }
+
+    .back-btn {
+      margin-top: 30px;
+      background: #ff6b81;
+      color: white;
+      padding: 10px 25px;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: bold;
+      transition: 0.3s;
+    }
+
+    .back-btn:hover {
+      background: #ff4757;
+    }
+
+    /* Popup box */
+    .popup {
+      display: none;
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #1a1b3a;
+      padding: 25px;
+      border-radius: 10px;
+      box-shadow: 0 0 15px rgba(0,0,0,0.5);
+      z-index: 100;
+      text-align: center;
+      width: 300px;
+      position: relative;
+    }
+
+    .popup input, .popup select {
+      width: 85%;
+      margin-bottom: 10px;
+      padding: 8px;
+      border-radius: 6px;
+      border: none;
+      font-size: 15px;
+    }
+
+    .popup button {
+      background: #ff6b81;
+      color: #fff;
+      border: none;
+      padding: 8px 16px;
+      border-radius: 5px;
+      cursor: pointer;
+      margin-top: 5px;
+    }
+
+    /* Cancel button inside popup */
+    .popup-close-btn {
+      position: absolute;
+      top: 8px;
+      right: 10px;
+      background: none;
+      border: none;
+      color: #fff;
+      font-size: 20px;
+      cursor: pointer;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+  <h1>♻️ Byproduct Tracking</h1>
+
+  <!-- ✅ Centered Search Bar -->
+  <div class="search-bar">
+    <input type="text" id="search" placeholder="🔍 Search Byproduct..." onkeyup="filterTable()">
+  </div>
+
+  <!-- Add Item Section -->
+  <div class="form-section">
+    <input type="text" id="productName" placeholder="Product Name">
+    <input type="text" id="byproductName" placeholder="Byproduct Name">
+    <input type="number" id="quantity" placeholder="Quantity (kg)" min="1">
+    <button class="add-btn" onclick="addItem()">+ Add Item</button>
+  </div>
+
+  <!-- Scrollable Table -->
+  <div class="table-container">
+    <table id="byproductTable">
+      <thead>
+        <tr>
+          <th>Product</th>
+          <th>Byproduct</th>
+          <th>Quantity (kg)</th>
+          <th>Actions</th>
+        </tr>
+      </thead>
+      <tbody></tbody>
+    </table>
+  </div>
+
+  <button class="back-btn" onclick="window.location.href='/staff-dashboard'">← Back to Dashboard</button>
+
+  <!-- Popup -->
+  <div class="popup" id="popupBox">
+    <button class="popup-close-btn" onclick="popupBox.style.display='none'">×</button>
+    <h3 id="popupTitle">Update Quantity</h3>
+    <input type="number" id="popupQty" placeholder="Enter Quantity" min="1">
+    <select id="popupReason">
+      <option value="Reusable">Reusable</option>
+      <option value="Sold">Sold</option>
+    </select>
+    <button onclick="confirmAction()">Confirm</button>
+  </div>
+
+  <script>
+    const tableBody = document.querySelector("#byproductTable tbody");
+    const popupBox = document.getElementById("popupBox");
+    const popupTitle = document.getElementById("popupTitle");
+    const popupQty = document.getElementById("popupQty");
+    const popupReason = document.getElementById("popupReason");
+
+    let currentRow = null;
+    let currentAction = null;
+
+    // ✅ Open popup for increase/decrease function
+    function openPopup(button, action) {
+      currentRow = button.closest("tr");
+      currentAction = action;
+
+      popupTitle.textContent =
+        action === "increase" ? "Increase Quantity" : "Decrease Quantity";
+      popupQty.value = "";
+
+      // Show/hide dropdown based on action
+      popupReason.style.display = action === "increase" ? "none" : "block";
+      if(action === "decrease") popupReason.value = "Reusable"; // reset reason for decrease
+
+      popupBox.style.display = "block";
+    }
+
+    // ✅ Backend-connected functions
+    async function addItem() {
+      const product = document.getElementById("productName").value.trim();
+      const byproduct = document.getElementById("byproductName").value.trim();
+      const qty = parseFloat(document.getElementById("quantity").value);
+
+      if (!product || !byproduct || isNaN(qty) || qty <= 0) {
+        alert("Please enter valid product, byproduct, and quantity.");
+        return;
+      }
+
+      const res = await fetch("/api/byproduct/add", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ productName: product, byproductName: byproduct, quantity: qty })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        alert("Byproduct added successfully!");
+        loadByproducts();
+      } else {
+        alert(data.error || "Error adding byproduct");
+      }
+
+      document.getElementById("productName").value = "";
+      document.getElementById("byproductName").value = "";
+      document.getElementById("quantity").value = "";
+    }
+
+    async function confirmAction() {
+      const qtyValue = parseFloat(popupQty.value);
+      const reason = popupReason.value;
+      const product = currentRow.children[0].textContent;
+      const byproduct = currentRow.children[1].textContent;
+
+      if (isNaN(qtyValue) || qtyValue <= 0) {
+        alert("Enter valid quantity.");
+        return;
+      }
+
+      const res = await fetch("/api/byproduct/update", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          productName: product,
+          byproductName: byproduct,
+          changeQty: qtyValue,
+          action: currentAction,
+          reason
+        })
+      });
+
+      const data = await res.json();
+      if (data.success) {
+        alert("Quantity updated successfully!");
+        loadByproducts();
+      } else {
+        alert(data.error || "Error updating quantity");
+      }
+
+      popupBox.style.display = "none";
+    }
+
+    async function loadByproducts() {
+      const res = await fetch("/api/byproduct");
+      const data = await res.json();
+
+      const tbody = document.querySelector("#byproductTable tbody");
+      tbody.innerHTML = "";
+
+      data.forEach(item => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${item.productName}</td>
+          <td>${item.byproductName}</td>
+          <td class="qty">${item.quantity}</td>
+          <td>
+            <button class="action-btn inc" onclick="openPopup(this, 'increase')">+</button>
+            <button class="action-btn dec" onclick="openPopup(this, 'decrease')">-</button>
+          </td>
+        `;
+        tbody.appendChild(row);
+      });
+    }
+
+    // ✅ Call it once when page loads
+    loadByproducts();
+
+    // Optional: Search/filter function
+    function filterTable() {
+      const filter = document.getElementById("search").value.toUpperCase();
+      const rows = tableBody.getElementsByTagName("tr");
+
+      for (let i = 0; i < rows.length; i++) {
+        const cells = rows[i].getElementsByTagName("td");
+        const product = cells[0].textContent.toUpperCase();
+        const byproduct = cells[1].textContent.toUpperCase();
+        if (product.includes(filter) || byproduct.includes(filter)) {
+          rows[i].style.display = "";
+        } else {
+          rows[i].style.display = "none";
+        }
+      }
+    }
+  </script>
+</body>
+</html>
