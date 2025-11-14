@@ -80,6 +80,55 @@ const enquirySchema = new mongoose.Schema({
 });
 const Enquiry = mongoose.model("Enquiry", enquirySchema);
 
+// ----------------- BYPRODUCT LOG SCHEMA -----------------
+const byproductLogSchema = new mongoose.Schema({
+  productName: { type: String, required: true },
+  byproductName: { type: String, required: true },
+  action: { type: String, required: true }, // 'Add', 'Increase', 'Decrease'
+  quantityChanged: { type: Number, required: true },
+  reason: { type: String, default: "-" },
+  staffName: { type: String, default: "Unknown Staff" },
+  timestamp: { type: Date, default: Date.now }
+});
+
+const ByproductLog = mongoose.model("ByproductLog", byproductLogSchema);
+
+// ----------------- ✅ BYPRODUCT HISTORY ROUTE -----------------
+app.get("/api/byproduct/history", requireAdminAuth, async (req, res) => {
+  try {
+    const { search } = req.query; // optional search query
+    let filter = {};
+
+    if (search && search.trim() !== "") {
+      // Case-insensitive search for staffName OR productName
+      const regex = new RegExp(search.trim(), "i");
+      filter = {
+        $or: [
+          { staffName: regex },
+          { productName: regex }
+        ]
+      };
+    }
+
+    const logs = await ByproductLog.find(filter).sort({ timestamp: -1 }); // latest first
+    res.json(logs);
+
+  } catch (err) {
+    console.error("Error fetching byproduct history:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// ✅ BYPRODUCT SCHEMA
+const byproductSchema = new mongoose.Schema({
+  productName: { type: String, required: true },
+  byproductName: { type: String, required: true },
+  quantity: { type: Number, required: true, default: 0 },
+  staffName: { type: String, default: "Unknown Staff" },
+  timestamp: { type: Date, default: Date.now }
+});
+const Byproduct = mongoose.model("Byproduct", byproductSchema);
+
 // ----------------- MIDDLEWARE -----------------
 const requireAdminAuth = (req, res, next) => {
   if (req.session.admin) {
@@ -238,6 +287,117 @@ app.post("/staff-stockavai", requireStaffAuth, (req, res) => {
 app.get("/staff-enquiry", requireStaffAuth, (req, res) => {
   res.sendFile(path.join(__dirname, "staff-enquiry.html"));
 });
+app.get("/staff-byproduct", requireStaffAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, "staff-byproduct.html"));
+});
+
+// ----------------- ✅ BYPRODUCT ROUTES -----------------
+
+// Get all byproducts (for both admin & staff view)
+app.get("/api/byproduct", async (req, res) => {
+  try {
+    const byproducts = await Byproduct.find().sort({ timestamp: -1 });
+    res.json(byproducts);
+  } catch (err) {
+    console.error("Error fetching byproducts:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Add new byproduct
+app.post("/api/byproduct/add", async (req, res) => {
+  try {
+    const { productName, byproductName, quantity } = req.body;
+    if (!productName || !byproductName || isNaN(quantity) || quantity <= 0) {
+      return res.status(400).json({ error: "Invalid input" });
+    }
+
+    const staffName = req.session.username || "Unknown Staff";
+
+    // Check if record exists
+    let record = await Byproduct.findOne({
+      productName,
+      byproductName
+    });
+
+    if (record) {
+  record.quantity += Number(quantity);
+  await record.save();
+
+  // <-- Add here
+  const log = new ByproductLog({
+    productName,
+    byproductName,
+    action: "Add",
+    quantityChanged: quantity,
+    staffName
+  });
+  await log.save();
+} else {
+  record = new Byproduct({ productName, byproductName, quantity, staffName });
+  await record.save();
+
+  // <-- Add here as well
+  const log = new ByproductLog({
+    productName,
+    byproductName,
+    action: "Add",
+    quantityChanged: quantity,
+    staffName
+  });
+  await log.save();
+}
+
+
+    res.json({ success: true, message: "Byproduct added successfully", record });
+  } catch (err) {
+    console.error("Error adding byproduct:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Update quantity (increase or decrease)
+app.post("/api/byproduct/update", async (req, res) => {
+  try {
+    const { productName, byproductName, changeQty, action, reason } = req.body;
+
+    const record = await Byproduct.findOne({ productName, byproductName });
+    if (!record) return res.status(404).json({ error: "Byproduct not found" });
+
+    if (action === "increase") {
+      record.quantity += Number(changeQty);
+    } else if (action === "decrease") {
+      if (record.quantity < changeQty) {
+        return res.status(400).json({ error: "Insufficient quantity" });
+      }
+      record.quantity -= Number(changeQty);
+    }
+
+    await record.save();
+
+    // ✅ FIX: correct reason handling
+    let finalReason = "-";  // default for increase
+    if (action === "decrease") {
+      finalReason = reason; // only decrease has real reason
+    }
+
+    // Save action to ByproductLog
+    const log = new ByproductLog({
+      productName,
+      byproductName,
+      action: action === "increase" ? "Increase" : "Decrease",
+      quantityChanged: changeQty,
+      reason: finalReason,  // <-- FIXED
+      staffName: req.session.username || "Unknown Staff"
+    });
+    await log.save();
+
+    res.json({ success: true, message: "Quantity updated", record });
+  } catch (err) {
+    console.error("Error updating byproduct:", err);
+    res.status(500).json({ error: "Server error" });
+  }
+});
 
 // ADMIN ENQUIRY ROUTE
 app.get("/admin-enquiry", requireAdminAuth, (req, res) => {
@@ -259,6 +419,14 @@ app.get("/admin-dashboard", requireAdminAuth, (req, res) => {
 
 app.get("/admin-stockavai", requireAdminAuth, (req, res) => res.sendFile(path.join(__dirname, "admin-stockavai.html")));
 app.get("/admin-history", requireAdminAuth, (req, res) => res.sendFile(path.join(__dirname, "admin-history.html")));
+
+// ADMIN BYPRODUCT PAGE ROUTE
+app.get("/admin-byproduct", requireAdminAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, "admin-byproduct.html"));
+});
+app.get("/admin-byproduct-history", requireAdminAuth, (req, res) => {
+  res.sendFile(path.join(__dirname, "admin-byproduct-history.html"));
+});
 
 // ----------------- ✅ ENQUIRY ROUTES -----------------
 // ✅ GET ALL ENQUIRIES (for admin page)
@@ -606,6 +774,7 @@ app.listen(PORT, () => {
   console.log(`👤 Admin Email: ${process.env.ADMIN_EMAIL}`);
   console.log(`🔑 Brevo API Key: ${process.env.BREVO_API_KEY ? 'Set' : 'Not Set'}`);
 });
+
 
 
 
